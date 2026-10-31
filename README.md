@@ -12,6 +12,21 @@ python3 -m http.server 8000
 # open http://localhost:8000 in Chrome or Edge (desktop)
 ```
 
+### YouTube → MP3 (optional local server)
+
+YouTube tracks can't be decoded in the browser, so they only get sampled BPM and key and no beat sync. A small Node server can fetch each video's audio and turn it into an mp3. The track then goes through the same pipeline as a dropped file: exact BPM, key and beat grid, a waveform and true beat sync.
+
+```sh
+cd server && npm install   # one time; pulls a static ffmpeg binary
+npm start                  # serves the app on http://127.0.0.1:8000 and the /api
+```
+
+- **Native extractor.** `server/ytextract.js` calls YouTube's InnerTube player API the way the mobile apps do, picks the best audio-only stream (AAC preferred) and downloads it in ranged chunks. There is no yt-dlp. Only ffmpeg is an external tool (`FFMPEG=/path/to/ffmpeg` overrides the bundled one).
+- **Seamless flow.** With the server running, **Analyze pending** converts pending YouTube tracks first, then analyzes them as files, so the tab-share prompt is skipped. The ⇩ button converts a single track, and **Convert all YouTube → MP3** does the whole library. Converted tracks show a `YT→MP3` badge and survive reloads.
+- **Cache.** mp3s are stored in `server/cache/` (override with `TUBEDJ_CACHE`). The server binds to `127.0.0.1` only (`HOST`, `PORT` override).
+- **Fallback.** If a conversion fails, the track stays a YouTube track and uses the tab-capture analysis.
+- This is for personal use. Downloading from YouTube is against its terms of service, and the extractor may break whenever YouTube changes its API.
+
 ## How it works
 
 | Piece | How |
@@ -45,4 +60,5 @@ Everything is saved to `localStorage`: library, analysis, set and settings.
 node test/core.test.js                     # DSP + ordering on synthetic audio
 python3 -m http.server 8765 &              # then, with Chrome installed:
 node test/e2e-local.mjs                    # headless: analyze files, build set, crossfade, beat-sync
+# with `npm start` running (PORT=8766): python3 test/e2e-convert.py   # convert a video and analyze it
 ```
