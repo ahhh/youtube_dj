@@ -1,0 +1,1470 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tube DJ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<style>
+:root{
+  --bg:#0a0b0f; --panel:#13151c; --panel2:#1a1d26; --line:#262a36; --text:#e9ebf1; --dim:#8b91a3;
+  --accent:#ff3d7f; --accent2:#38e8ff; --good:#3ddc84; --ok:#ffc23d; --bad:#ff5a5a;
+  --mono:'JetBrains Mono',ui-monospace,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 'Space Grotesk',system-ui,sans-serif}
+button{font:inherit;color:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
+button:hover:not(:disabled){border-color:#3a4052;background:#20242f}
+button:disabled{opacity:.4;cursor:default}
+button.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+button.primary:hover:not(:disabled){background:#ff5a93}
+button.ghost{background:transparent}
+button.link{background:none;border:0;padding:0;color:var(--accent2);text-decoration:underline}
+input,select,textarea{font:inherit;color:var(--text);background:#0e1016;border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+input[type=range]{padding:0;accent-color:var(--accent);background:none;border:0}
+input[type=checkbox]{accent-color:var(--accent)}
+.dim{color:var(--dim)} small{color:var(--dim)}
+.mono{font-family:var(--mono)}
+
+header.top{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(10,11,15,.92);backdrop-filter:blur(8px);z-index:20}
+.brand{font-weight:700;font-size:20px;letter-spacing:.04em}
+.brand span{color:var(--accent)}
+#stats{flex:1;color:var(--dim);font-size:13px}
+.banner{background:#3a1420;border-bottom:1px solid var(--accent);padding:10px 20px}
+
+main{padding:16px 20px 40px;display:flex;flex-direction:column;gap:16px;max-width:1600px;margin:0 auto}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
+h3{margin:0 0 10px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:500}
+.step{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;margin-right:6px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+
+/* setup */
+.setup-grid{display:grid;grid-template-columns:1.2fr 1.2fr 360px;gap:20px}
+textarea#urls{width:100%;min-height:96px;resize:vertical;font-family:var(--mono);font-size:12px}
+.drop{margin-top:12px;border:1px dashed #3a4052;border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:2px}
+.drop.over,body.dragging .drop{border-color:var(--accent2);background:#0f1d22}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:8px 14px}
+.opts label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--dim)}
+.opts label.chk{flex-direction:row;align-items:center;gap:6px;grid-column:1/-1;color:var(--text)}
+.bpmrange{display:flex;align-items:center;gap:6px}.bpmrange input{width:70px}
+.progress{height:6px;background:#0e1016;border-radius:3px;margin-top:10px;overflow:hidden}
+.progress>div{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .3s}
+#anStatus{margin-top:6px;min-height:20px;font-size:13px}
+.hint{font-size:12px;color:var(--dim);margin:8px 0 0}
+.log{font-family:var(--mono);font-size:11px;color:var(--dim);height:120px;overflow:auto;margin-top:8px;white-space:pre-wrap}
+.log .err{color:var(--bad)} .log .okl{color:var(--good)}
+
+/* decks */
+.decks{display:grid;grid-template-columns:minmax(0,2.1fr) 270px minmax(0,1fr);grid-template-areas:"now mixer next";gap:16px;align-items:start}
+.deck{--deck:#3d9bff;--deck-dim:#14304f;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;transition:border-color .3s}
+#deck1{--deck:#ff9a3d;--deck-dim:#4f2e10}
+.deck.now{border-color:var(--deck-dim);box-shadow:0 0 0 1px var(--deck-dim),0 10px 40px -20px var(--deck)}
+.deck.mixing{border-color:var(--deck)}
+.deck-head{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.deck-letter{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:var(--deck);color:#0a0b0f;font-weight:700;font-size:16px}
+.role{flex:1;font-size:12px;letter-spacing:.12em;font-weight:700;color:var(--dim)}
+.deck.now .role{color:var(--deck)}
+.bpm-big{font-family:var(--mono);font-size:22px;font-weight:600;line-height:1}
+.deck:not(.now) .bpm-big{font-size:17px}
+.bpm-big small{font-size:11px;color:var(--dim);margin-left:3px}
+.bpm-big em{font-style:normal;font-size:11px;color:var(--deck);margin-left:6px}
+.wave{display:none;width:100%;height:56px;margin-top:10px;border-radius:6px;background:#07080b;cursor:pointer}
+.deck.has-wave .wave{display:block}
+.deck:not(.now) .wave{height:40px}
+.video{position:relative;aspect-ratio:16/9;background:#000;border-radius:10px;overflow:hidden}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.video .empty,.video .disc-wrap{position:absolute;inset:0;display:none;place-items:center;color:var(--dim);pointer-events:none}
+.deck.no-track .video .empty{display:grid;background:#07080b}
+.deck.is-file .video iframe{visibility:hidden}
+.deck.is-file .video .disc-wrap{display:grid;background:radial-gradient(circle at 50% 50%,#1c1f2a,#07080b 70%)}
+.disc{width:58%;aspect-ratio:1;border-radius:50%;background:repeating-radial-gradient(circle,#111 0 2px,#1b1b1f 2px 4px);position:relative;box-shadow:0 0 40px #000}
+.disc::after{content:'';position:absolute;inset:36%;border-radius:50%;background:var(--deck);box-shadow:inset 0 0 0 6px #0008}
+.disc::before{content:'';position:absolute;top:8%;left:48%;width:4%;height:20%;background:#fff3;border-radius:2px}
+.deck.spinning .disc{animation:spin 1.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.meta{margin-top:10px}
+.title{font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.deck:not(.now) .title{font-size:14px}
+.author{color:var(--dim);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-height:17px}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;min-height:22px}
+.badge{font-family:var(--mono);font-size:12px;padding:2px 7px;border-radius:6px;background:var(--panel2);border:1px solid var(--line)}
+.cam{font-family:var(--mono);font-size:12px;font-weight:600;padding:2px 7px;border-radius:6px;color:#0a0b0f;background:hsl(var(--h) 80% var(--l,62%))}
+.kind{font-size:10px;letter-spacing:.06em;padding:1px 5px;border-radius:4px;border:1px solid var(--line);color:var(--dim);font-family:var(--mono)}
+.kind.file{color:var(--accent2);border-color:#1d4a55}
+.prog{display:flex;align-items:center;gap:10px;margin-top:10px}
+.bar{flex:1;height:6px;background:#0e1016;border-radius:3px;overflow:hidden;cursor:pointer}
+.bar i{display:block;height:100%;width:0;background:var(--deck)}
+.time{font-family:var(--mono);font-size:12px;color:var(--dim);min-width:110px;text-align:right}
+.ctl{display:flex;gap:6px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.tapv{font-family:var(--mono);font-size:12px;color:var(--accent2)}
+.b-play{background:#1f8f4e;border-color:#1f8f4e;color:#fff;font-weight:700;min-width:110px}
+.b-play:hover:not(:disabled){background:#27a85d!important}
+.deck:not(.now) .b-play,.deck:not(.now) .b-tap,.deck:not(.now) .tapv,.deck:not(.now) .b-tapok,.deck.now .b-skip{display:none}
+
+.mixer{grid-area:mixer;display:flex;flex-direction:column;gap:10px}
+.trans{background:#0e1016;border-radius:10px;padding:10px;font-size:13px;min-height:74px}
+.trans .q{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
+.big{padding:12px;font-size:16px;font-weight:700;letter-spacing:.06em}
+button.mix{background:linear-gradient(90deg,var(--accent),#b23dff);border:0;color:#fff}
+button.mix.fading{background:var(--accent2);color:#000}
+.fader{display:flex;align-items:center;gap:8px}
+.fader input{flex:1}
+.fader span{font-family:var(--mono);font-weight:700;color:var(--dim);width:14px;text-align:center}
+.fader span:first-child.on{color:#3d9bff}.fader span:last-child.on{color:#ff9a3d}
+#fader{accent-color:#c9cdd8}
+.mixer label{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--dim);white-space:nowrap}
+.mixer label input[type=range]{flex:1;min-width:0;max-width:120px}
+.mixer label b{font-family:var(--mono);font-weight:400;color:var(--text);min-width:40px;text-align:right}
+.mixer label.chk{justify-content:flex-start;color:var(--text)}
+.mixer hr{border:0;border-top:1px solid var(--line);margin:2px 0;width:100%}
+
+/* lower */
+.lower{display:grid;grid-template-columns:minmax(0,1fr) 360px;gap:16px;align-items:start}
+.tabs{display:flex;gap:4px;margin-bottom:10px}
+.tabs button{border-radius:8px 8px 0 0;border-bottom-color:transparent;background:transparent;color:var(--dim)}
+.tabs button.on{color:var(--text);background:var(--panel2)}
+.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px;font-size:12px;color:var(--dim)}
+.toolbar label{display:flex;align-items:center;gap:6px}
+.toolbar .sp{flex:1}
+.list{max-height:520px;overflow:auto;border-top:1px solid var(--line)}
+.trow{display:grid;grid-template-columns:34px 40px minmax(0,1fr) 62px 46px 92px auto;gap:8px;align-items:center;padding:6px 6px;border-bottom:1px solid #1c1f29}
+.trow:hover{background:#171a23}
+.trow .num{font-family:var(--mono);font-size:12px;color:var(--dim);text-align:right}
+.trow .tt{min-width:0}
+.trow .tt b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow .tt small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.trow .tbpm{font-family:var(--mono);text-align:right;cursor:pointer}
+.trow .tbpm.low::after{content:'?';color:var(--ok)}
+.trow .cam{cursor:pointer;text-align:center}
+.trow .tx{font-family:var(--mono);font-size:11px;white-space:nowrap}
+.tx.good{color:var(--good)}.tx.ok{color:var(--ok)}.tx.bad{color:var(--bad)}
+.trow .acts{display:flex;gap:3px;opacity:.35}
+.trow:hover .acts{opacity:1}
+.trow .acts button{padding:2px 7px;font-size:12px}
+.trow.played{opacity:.4}
+.trow.current{background:#2a1220}
+.trow.current .num{color:var(--accent)}
+.trow.next{background:#0f2128}
+.trow.next .num{color:var(--accent2)}
+.trow.drop-above{box-shadow:inset 0 2px 0 var(--accent2)}
+.trow[draggable=true]{cursor:grab}
+.status{font-size:11px;font-family:var(--mono)}
+.status.pending{color:var(--dim)}.status.analyzing{color:var(--accent2)}.status.error{color:var(--bad)}.status.missing{color:var(--ok)}
+.emptymsg{padding:30px;text-align:center;color:var(--dim)}
+
+aside{display:flex;flex-direction:column;gap:16px}
+.grp{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px;background:var(--panel2)}
+.grp.cur{border-color:var(--accent)}
+.grp-top{display:flex;justify-content:space-between;align-items:baseline}
+.grp-top b{font-family:var(--mono);font-size:15px}
+.grp-bar{height:4px;border-radius:2px;background:linear-gradient(90deg,var(--accent),var(--accent2));margin:6px 0}
+.grp-keys{display:flex;gap:4px;flex-wrap:wrap}
+.grp-keys .cam{font-size:10px;padding:1px 5px}
+.grp-act{display:flex;gap:6px;margin-top:8px}
+.grp-act button{font-size:12px;padding:3px 9px}
+.sug{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 8px;padding:7px 0;border-bottom:1px solid #1c1f29;align-items:center}
+.sug .tt b{display:block;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sug .meta2{display:flex;gap:6px;align-items:center;font-size:12px;margin-top:2px}
+.sug .acts{display:flex;gap:4px}.sug .acts button{padding:2px 8px;font-size:12px}
+
+#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#222633;border:1px solid #3a4052;padding:10px 16px;border-radius:10px;opacity:0;transition:.25s;pointer-events:none;z-index:50;max-width:90vw}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+@media (max-width:1200px){.setup-grid{grid-template-columns:1fr 1fr}.an-col{grid-column:1/-1}}
+@media (max-width:1000px){
+  .decks{grid-template-columns:minmax(0,1fr);grid-template-areas:"now" "mixer" "next"}
+  .lower{grid-template-columns:minmax(0,1fr)}
+}
+@media (max-width:700px){
+  main{padding:12px 16px}
+  .setup-grid{grid-template-columns:1fr}
+  .trow{grid-template-columns:24px minmax(0,1fr) 54px 42px;grid-auto-rows:auto}
+  .trow .kindc,.trow .tx{display:none}
+  .trow .acts{grid-column:2/-1;opacity:1}
+  header.top{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+<div id="fileBanner" class="banner" hidden>
+  This page is opened from <b>file://</b>. YouTube embeds and tab-audio capture need a web origin. Run <code class="mono">python3 -m http.server 8000</code> in this folder and open <b>http://localhost:8000</b>.
+</div>
+<header class="top">
+  <div class="brand">TUBE<span>DJ</span></div>
+  <div id="stats"></div>
+  <button id="btnToggleSetup" class="ghost">Load &amp; analyze ▾</button>
+</header>
+
+<main>
+  <section id="setup" class="panel">
+    <div class="setup-grid">
+      <div>
+        <h3><span class="step">1</span>Add music</h3>
+        <textarea id="urls" placeholder="Paste YouTube playlist links, video links or IDs — one per line.&#10;https://www.youtube.com/playlist?list=PL...&#10;https://youtu.be/dQw4w9WgXcQ"></textarea>
+        <div class="row"><button id="btnLoad" class="primary">Add YouTube links</button><span id="loadStatus" class="dim"></span></div>
+        <div class="drop" id="dropZone">
+          <input type="file" id="fileInput" multiple accept="audio/*,.mp3,.m4a,.wav,.flac,.ogg,.aac,.opus" hidden>
+          <b>Local audio files</b>
+          <span>Drop files anywhere on the page, or <button class="link" id="btnFiles">browse</button></span>
+          <small>Decoded and analyzed in full: more accurate BPM/key, plus beat-synced mixing.</small>
+        </div>
+      </div>
+      <div>
+        <h3><span class="step">2</span>Analyze BPM &amp; key</h3>
+        <div class="opts">
+          <label>Sample length (YouTube)
+            <select id="optSample"><option value="8">8 s</option><option value="12">12 s</option><option value="15">15 s</option><option value="20">20 s</option><option value="30">30 s</option></select></label>
+          <label>Samples per track
+            <select id="optSegments"><option value="1">1 (fastest)</option><option value="2">2</option><option value="3">3 (best)</option></select></label>
+          <label>Sampling speed
+            <select id="optSpeed"><option value="1">1× (accurate)</option><option value="1.5">1.5×</option><option value="2">2× (fast)</option></select></label>
+          <label>BPM range
+            <span class="bpmrange"><input type="number" id="optBpmMin" min="50" max="130" step="1"> – <span id="bpmMax" class="mono"></span></span></label>
+          <label class="chk"><input type="checkbox" id="optMute"> Mute speakers while sampling YouTube</label>
+        </div>
+        <div class="row">
+          <button id="btnAnalyze" class="primary">Analyze pending</button>
+          <button id="btnRetry" class="ghost">Retry failed</button>
+          <button id="btnCancel" hidden>Stop</button>
+        </div>
+        <div class="progress"><div id="anBar"></div></div>
+        <div id="anStatus" class="dim"></div>
+        <p class="hint">For YouTube tracks, Chrome or Edge will ask to share <b>this tab</b>. Keep <b>“Also share tab audio”</b> checked. Each video plays briefly in the small player and gets sampled; nothing leaves your browser. Results are cached, so a track is only analyzed once.</p>
+      </div>
+      <div class="an-col">
+        <div class="video"><div id="anPlayer"></div></div>
+        <div id="anLog" class="log"></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="decks" id="decks">
+    <div class="mixer panel" id="mixer">
+      <div class="trans" id="transInfo"></div>
+      <button id="btnStart" class="primary big">▶ Start set</button>
+      <button id="btnMix" class="mix big" title="Shortcut: M">MIX ▸</button>
+      <div class="fader"><span id="fadeL">A</span><input type="range" id="fader" min="0" max="1" step="0.005" value="0" aria-label="Crossfader"><span id="fadeR">B</span></div>
+      <label class="chk"><input type="checkbox" id="optAuto"> Auto-mix at end of track</label>
+      <label>Fade <input type="range" id="optFade" min="0" max="30" step="1"><b id="vFade"></b></label>
+      <label title="Auto-mix starts this long before the track ends (skips long outros)">Mix-out lead <input type="range" id="optOutro" min="0" max="90" step="1"><b id="vOutro"></b></label>
+      <label title="Skip this many seconds of intro when a track is cued">Start at <input type="range" id="optIntro" min="0" max="90" step="1"><b id="vIntro"></b></label>
+      <label>Master <input type="range" id="optMaster" min="0" max="100" step="1"><b id="vMaster"></b></label>
+      <hr>
+      <label class="chk" title="Local files only: match tempo and line up beats when mixing"><input type="checkbox" id="optSync"> Beat-sync local files</label>
+      <label class="chk"><input type="checkbox" id="optGlide"> Glide tempo back after mix</label>
+    </div>
+  </section>
+
+  <section class="lower">
+    <div class="panel">
+      <div class="tabs"><button data-tab="set" class="on">Set list</button><button data-tab="lib">Library</button></div>
+      <div id="tabSet">
+        <div class="toolbar">
+          <label>Flow <select id="optMode"><option value="smooth">Smooth</option><option value="rising">Build up (rising BPM)</option><option value="falling">Wind down (falling BPM)</option></select></label>
+          <label title="How much key compatibility matters relative to BPM">Harmonic weight <input type="range" id="optKeyW" min="0" max="2" step="0.1"></label>
+          <label><input type="checkbox" id="optDedupe"> Skip duplicate songs</label>
+          <span class="sp"></span>
+          <button id="btnOrder">Auto-order upcoming</button>
+          <button id="btnBuild">Rebuild from library</button>
+          <button id="btnClear" class="ghost">Clear</button>
+        </div>
+        <div class="list" id="setView"></div>
+      </div>
+      <div id="tabLib" hidden>
+        <div class="toolbar">
+          <input id="libSearch" placeholder="Search title / artist…" style="flex:1;min-width:160px">
+          <select id="libFilter"><option value="all">All</option><option value="yt">YouTube</option><option value="file">Local files</option><option value="pending">Pending</option><option value="error">Failed</option></select>
+          <button id="btnLibClear" class="ghost">Remove all</button>
+        </div>
+        <div class="list" id="libView"></div>
+      </div>
+    </div>
+    <aside>
+      <div class="panel"><h3>Tempo groups</h3><div id="groups"></div></div>
+      <div class="panel"><h3>Good next picks</h3><div id="suggest"></div></div>
+    </aside>
+  </section>
+</main>
+<div id="toast"></div>
+
+<script src="core.js"></script>
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const frac = v => v - Math.floor(v);
+const fmtTime = s => { if (!isFinite(s) || s < 0) s = 0; s = Math.floor(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+async function waitUntil(fn, timeout = 10000, every = 150) {
+  const t0 = Date.now();
+  for (;;) {
+    const v = fn();
+    if (v) return v;
+    if (Date.now() - t0 > timeout) throw new Error('timeout');
+    await sleep(every);
+  }
+}
+let toastT;
+function toast(msg, ms = 3500) {
+  const el = $('#toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.classList.remove('show'), ms);
+}
+
+// ---------------------------------------------------------------- state
+const DEFAULTS = {
+  sampleSec: 12, segments: 2, speed: 1, bpmMin: 80, mute: true,
+  fadeSec: 8, outroSec: 8, introSec: 0, autoMix: true, master: 100, beatSync: true, glideBack: true,
+  mode: 'smooth', keyWeight: 1, dedupe: true,
+};
+const STORE_KEY = 'tubedj.v1';
+const S = { tracks: {}, order: [], set: [], pos: -1, settings: { ...DEFAULTS } };
+try {
+  const d = JSON.parse(localStorage.getItem(STORE_KEY));
+  if (d) { Object.assign(S, d); S.settings = { ...DEFAULTS, ...d.settings }; }
+} catch {}
+for (const t of Object.values(S.tracks)) if (t.status === 'analyzing') t.status = 'pending';
+let saveT;
+function save() {
+  clearTimeout(saveT);
+  saveT = setTimeout(() => {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify({ tracks: S.tracks, order: S.order, set: S.set, pos: S.pos, settings: S.settings })); }
+    catch (e) { console.warn('save failed', e); }
+  }, 300);
+}
+const opts = () => ({ mode: S.settings.mode, keyWeight: +S.settings.keyWeight });
+
+// Local files live only in memory for this session; analysis results persist by id.
+const LOCAL = new Map();
+const playable = t => t && t.status !== 'error' && (t.kind !== 'file' || LOCAL.has(t.id));
+const ready = t => playable(t) && t.status === 'done';
+
+function addTrack(id, src, extra = {}) {
+  if (!S.tracks[id]) { S.tracks[id] = { id, kind: 'yt', title: '', author: '', status: 'pending', sources: [], ...extra }; S.order.push(id); }
+  const t = S.tracks[id];
+  if (src && !t.sources.includes(src)) t.sources.push(src);
+  return t;
+}
+function setKey(t, tonic, minor) {
+  t.tonic = tonic; t.minor = minor;
+  t.camelot = Core.camelot(tonic, minor);
+  t.keyName = Core.keyName(tonic, minor);
+}
+
+// ---------------------------------------------------------------- YouTube
+const YT_ERR = { 2: 'invalid video id', 5: 'player error', 100: 'video removed or private', 101: 'embedding disabled by owner', 150: 'embedding disabled by owner', 153: 'missing referrer (serve over http://localhost)' };
+const ytErr = c => YT_ERR[c] || 'error ' + c;
+let ytReadyResolve;
+const ytReadyP = new Promise(r => (ytReadyResolve = r));
+window.onYouTubeIframeAPIReady = () => ytReadyResolve();
+function makePlayer(elId, events) {
+  return new YT.Player(elId, {
+    width: '100%', height: '100%',
+    playerVars: { playsinline: 1, rel: 0, modestbranding: 1, iv_load_policy: 3, origin: location.origin },
+    events,
+  });
+}
+
+function parseInput(text) {
+  const out = [];
+  for (const tok of text.split(/[\s,]+/).filter(Boolean)) {
+    const list = /[?&]list=([\w-]+)/.exec(tok);
+    const vid = /(?:[?&]v=|youtu\.be\/|\/shorts\/|\/embed\/|\/live\/)([\w-]{11})/.exec(tok);
+    if (list) out.push({ type: 'list', id: list[1] });
+    else if (vid) out.push({ type: 'video', id: vid[1] });
+    else if (/^(PL|OL|UU|FL|RD|LL)[\w-]{10,}$/.test(tok)) out.push({ type: 'list', id: tok });
+    else if (/^[\w-]{11}$/.test(tok)) out.push({ type: 'video', id: tok });
+  }
+  return out;
+}
+
+async function expandPlaylist(list) {
+  await waitUntil(() => AN.ready, 15000);
+  AN.err = null;
+  const before = JSON.stringify(AN.player.getPlaylist?.() || null);
+  const t0 = Date.now();
+  AN.player.cuePlaylist({ listType: 'playlist', list, index: 0 });
+  return waitUntil(() => {
+    if (AN.err != null) throw new Error(ytErr(AN.err));
+    const p = AN.player.getPlaylist?.();
+    if (!p || !p.length) return null;
+    if (AN.cuedAt > t0) return p;
+    if (Date.now() - t0 > 4000 && JSON.stringify(p) !== before) return p;
+    return null;
+  }, 15000);
+}
+
+async function addFromInput() {
+  if (AN.running) return toast('Wait for analysis to finish');
+  const items = parseInput($('#urls').value);
+  if (!items.length) return toast('No YouTube links or IDs found');
+  const st = $('#loadStatus');
+  let added = 0;
+  const before = new Set(S.order);
+  for (const it of items) {
+    if (it.type === 'video') { addTrack(it.id, 'videos'); continue; }
+    st.textContent = 'Loading playlist ' + it.id.slice(0, 12) + '…';
+    try {
+      const ids = await expandPlaylist(it.id);
+      for (const id of ids) addTrack(id, it.id);
+      log(`Playlist ${it.id}: ${ids.length} videos`, 'okl');
+    } catch (e) {
+      log(`Playlist ${it.id} failed: ${e.message}`, 'err');
+      toast(`Couldn't load playlist ${it.id}. Is it public or unlisted?`);
+    }
+  }
+  try { AN.player.stopVideo(); } catch {}
+  const fresh = S.order.filter(id => !before.has(id));
+  added = fresh.length;
+  st.textContent = `${added} new track${added === 1 ? '' : 's'} added${items.length > added ? ' (duplicates merged)' : ''}`;
+  $('#urls').value = '';
+  save(); render();
+  fetchTitles(fresh);
+}
+
+async function fetchTitles(ids) {
+  const todo = ids.filter(id => S.tracks[id] && !S.tracks[id].title);
+  let i = 0;
+  const worker = async () => {
+    while (i < todo.length) {
+      const id = todo[i++];
+      try {
+        const r = await fetch('https://noembed.com/embed?url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + id));
+        const j = await r.json();
+        const t = S.tracks[id];
+        if (t && j.title && !t.title) { t.title = j.title; t.author = j.author_name || ''; }
+      } catch {}
+    }
+  };
+  await Promise.all([1, 2, 3, 4].map(worker));
+  save(); render();
+}
+
+// ---------------------------------------------------------------- local files
+const AUDIO_EXT = /\.(mp3|m4a|aac|wav|flac|ogg|oga|opus|webm|aiff?)$/i;
+function addFiles(files) {
+  const list = [...files].filter(f => f.type.startsWith('audio/') || AUDIO_EXT.test(f.name));
+  if (!list.length) return toast('No audio files found');
+  let fresh = 0;
+  for (const f of list) {
+    const id = 'f:' + f.size + ':' + f.name;
+    if (!LOCAL.has(id)) LOCAL.set(id, { file: f, url: URL.createObjectURL(f) });
+    const base = f.name.replace(AUDIO_EXT, '');
+    const m = /^(.+?)\s+[-–]\s+(.+)$/.exec(base);
+    const isNew = !S.tracks[id];
+    const t = addTrack(id, 'Local files', { kind: 'file', title: m ? m[2] : base, author: m ? m[1] : 'Local file' });
+    if (t.status === 'error') t.status = t.bpm ? 'done' : 'pending';
+    if (isNew) fresh++;
+  }
+  toast(`${list.length} file${list.length === 1 ? '' : 's'} loaded (${fresh} new)`);
+  save(); render(); syncDecks();
+  if (!AN.running && list.some(f => S.tracks['f:' + f.size + ':' + f.name].status === 'pending')) runAnalysis({ filesOnly: true });
+}
+
+async function analyzeFile(t) {
+  const { file } = LOCAL.get(t.id);
+  const ctx = new OfflineAudioContext(1, 1, 22050); // decodeAudioData resamples to 22.05 kHz
+  const ab = await ctx.decodeAudioData(await file.arrayBuffer());
+  const sr = ab.sampleRate, dur = ab.duration;
+  const c0 = ab.getChannelData(0), c1 = ab.numberOfChannels > 1 ? ab.getChannelData(1) : null;
+  let a = Math.floor(dur * 0.1 * sr), b = Math.min(Math.floor(dur * 0.9 * sr), a + 240 * sr);
+  if (b - a < 8 * sr) { a = 0; b = c0.length; }
+  const mono = new Float32Array(b - a);
+  for (let i = 0; i < mono.length; i++) mono[i] = c1 ? (c0[a + i] + c1[a + i]) * 0.5 : c0[a + i];
+  const r = DSP.analyze([mono], sr, { bpmMin: +S.settings.bpmMin, phase: true });
+  t.duration = dur;
+  t.peaks = wavePeaks(c0, c1);
+  applyResult(t, r);
+  t.beatOffset = a / sr + r.beatOffset;
+}
+
+// ~600-point overview for the deck waveform; small enough to keep in localStorage.
+function wavePeaks(c0, c1, n = 600) {
+  const step = Math.max(1, Math.floor(c0.length / n)), out = [];
+  for (let p = 0; p < n; p++) {
+    let m = 0;
+    for (let i = p * step, e = Math.min(c0.length, i + step); i < e; i += 4) {
+      const v = Math.abs(c1 ? (c0[i] + c1[i]) * 0.5 : c0[i]);
+      if (v > m) m = v;
+    }
+    out.push(m);
+  }
+  const max = Math.max(...out) || 1;
+  return out.map(v => Math.round(v / max * 100));
+}
+
+function drawWave(d) {
+  const cv = d.el.querySelector('.wave'), t = d.track;
+  if (!t?.peaks || d.kind !== 'file' || !cv.clientWidth) return;
+  const dpr = devicePixelRatio || 1, W = Math.round(cv.clientWidth * dpr), H = Math.round(cv.clientHeight * dpr);
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const g = cv.getContext('2d'), col = getComputedStyle(d.el).getPropertyValue('--deck').trim();
+  const dur = d.duration() || t.duration || 1, k = d.time() / dur, n = t.peaks.length, w = W / n;
+  g.clearRect(0, 0, W, H);
+  for (let i = 0; i < n; i++) {
+    const h = Math.max(1, t.peaks[i] / 100 * H * 0.92);
+    g.fillStyle = col;
+    g.globalAlpha = i / n < k ? 0.35 : 0.95;
+    g.fillRect(i * w, (H - h) / 2, Math.max(1, w - 0.4 * dpr), h);
+  }
+  g.globalAlpha = 1;
+  if (t.bpm && t.beatOffset != null) {
+    const bar = 240 / t.bpm; // bar lines every 4 beats
+    g.fillStyle = 'rgba(255,255,255,.28)';
+    for (let s = ((t.beatOffset % bar) + bar) % bar; s < dur; s += bar) g.fillRect(Math.round(s / dur * W), 0, dpr, 4 * dpr);
+  }
+  g.fillStyle = '#fff';
+  g.fillRect(Math.round(k * W) - dpr, 0, 2 * dpr, H);
+}
+
+function applyResult(t, r) {
+  t.bpm = r.bpm; t.bpmConf = r.bpmConf; t.keyConf = r.keyConf;
+  setKey(t, r.tonic, r.minor);
+  t.status = 'done'; t.error = null;
+}
+
+// ---------------------------------------------------------------- analyzer (YouTube via tab capture)
+const AN = { player: null, ready: false, state: -1, err: null, cuedAt: 0, running: false, cancel: false, cap: null };
+
+function log(msg, cls = '') {
+  const el = $('#anLog');
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = new Date().toLocaleTimeString() + '  ' + msg;
+  el.prepend(line);
+  while (el.childNodes.length > 80) el.lastChild.remove();
+}
+
+async function startCapture() {
+  if (!navigator.mediaDevices?.getDisplayMedia) throw new Error('This browser cannot capture tab audio. Use Chrome or Edge on desktop.');
+  const stream = await navigator.mediaDevices.getDisplayMedia({
+    video: { frameRate: { ideal: 1 } },
+    audio: { suppressLocalAudioPlayback: !!S.settings.mute, echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    preferCurrentTab: true, selfBrowserSurface: 'include', systemAudio: 'exclude', surfaceSwitching: 'exclude',
+  });
+  const at = stream.getAudioTracks()[0];
+  if (!at) {
+    stream.getTracks().forEach(t => t.stop());
+    throw new Error('No audio was shared. Pick THIS tab and keep “Also share tab audio” checked.');
+  }
+  const ctx = new AudioContext();
+  await ctx.resume();
+  const src = ctx.createMediaStreamSource(new MediaStream([at]));
+  const proc = ctx.createScriptProcessor(4096, 2, 1);
+  const sink = ctx.createGain();
+  sink.gain.value = 0;
+  const cap = { stream, ctx, on: false, chunks: [] };
+  proc.onaudioprocess = e => {
+    if (!cap.on) return;
+    const a = e.inputBuffer.getChannelData(0);
+    const b = e.inputBuffer.numberOfChannels > 1 ? e.inputBuffer.getChannelData(1) : a;
+    const m = new Float32Array(a.length);
+    for (let i = 0; i < a.length; i++) m[i] = (a[i] + b[i]) * 0.5;
+    cap.chunks.push(m);
+  };
+  src.connect(proc); proc.connect(sink); sink.connect(ctx.destination);
+  at.addEventListener('ended', () => { if (AN.running) { AN.cancel = true; log('Tab sharing stopped', 'err'); } });
+  AN.cap = cap;
+}
+
+function stopCapture() {
+  if (!AN.cap) return;
+  AN.cap.stream.getTracks().forEach(t => t.stop());
+  AN.cap.ctx.close();
+  AN.cap = null;
+}
+
+async function record(sec) {
+  const cap = AN.cap;
+  cap.chunks = []; cap.on = true;
+  const t0 = performance.now();
+  while (performance.now() - t0 < sec * 1000 && !AN.cancel) await sleep(100);
+  cap.on = false;
+  const n = cap.chunks.reduce((s, c) => s + c.length, 0);
+  const out = new Float32Array(n);
+  let o = 0;
+  for (const c of cap.chunks) { out.set(c, o); o += c.length; }
+  return out;
+}
+
+async function waitAdvancing(timeout) {
+  const t0 = Date.now();
+  let last = -1;
+  while (Date.now() - t0 < timeout) {
+    if (AN.err != null) throw new Error(ytErr(AN.err));
+    if (AN.cancel) throw new Error('cancelled');
+    const c = AN.player.getCurrentTime?.() || 0;
+    if (AN.player.getPlayerState() === 1 && last >= 0 && c > last + 0.03) return c;
+    last = c;
+    await sleep(200);
+  }
+  throw new Error('playback never started (blocked, ad, or slow connection)');
+}
+
+async function analyzeYouTube(t) {
+  const st = S.settings, rate = +st.speed, p = AN.player;
+  AN.err = null;
+  p.loadVideoById({ videoId: t.id, startSeconds: 20 });
+  await waitAdvancing(25000);
+  const vd = p.getVideoData?.() || {};
+  if (vd.title) t.title = vd.title;
+  if (vd.author) t.author = vd.author;
+  const dur = p.getDuration();
+  t.duration = dur;
+  p.unMute(); p.setVolume(100);
+  const fracs = { 1: [0.45], 2: [0.3, 0.62], 3: [0.25, 0.5, 0.75] }[st.segments] || [0.45];
+  const segs = [];
+  for (const f of fracs) {
+    if (AN.cancel) break;
+    p.seekTo(Math.max(0, dur * f), true);
+    if (rate !== 1) p.setPlaybackRate(rate);
+    await sleep(400);
+    await waitAdvancing(15000);
+    await sleep(500);
+    const t0 = p.getCurrentTime();
+    const pcm = await record(st.sampleSec / rate);
+    const t1 = p.getCurrentTime();
+    // During an ad or a buffering stall the video clock barely moves — discard that sample.
+    if (t1 - t0 < st.sampleSec * 0.6) { log('  sample skipped (ad or buffering)'); continue; }
+    segs.push(pcm);
+  }
+  p.pauseVideo();
+  if (AN.cancel) throw new Error('cancelled');
+  if (!segs.length) throw new Error('no clean audio sampled');
+  const r = DSP.analyze(segs, AN.cap.ctx.sampleRate, { rate, bpmMin: +st.bpmMin });
+  if (r.rms < 0.0005) throw new Error('SILENT');
+  applyResult(t, r);
+}
+
+async function runAnalysis({ filesOnly = false } = {}) {
+  if (AN.running) return;
+  const pend = S.order.map(id => S.tracks[id]).filter(t => t.status === 'pending');
+  const files = pend.filter(t => t.kind === 'file' && LOCAL.has(t.id));
+  let yts = filesOnly ? [] : pend.filter(t => t.kind !== 'file');
+  if (!files.length && !yts.length) {
+    if (!filesOnly) toast(pend.length ? 'Pending local files need to be re-added (drop them again)' : 'Nothing pending to analyze');
+    return;
+  }
+  if (yts.length && D.decks.some(d => d.playing && d.kind === 'yt')) {
+    toast('YouTube analysis listens to this tab. Pause the decks first. Analyzing local files only.');
+    yts = [];
+    if (!files.length) return;
+  }
+  AN.running = true; AN.cancel = false;
+  $('#btnCancel').hidden = false; $('#btnAnalyze').disabled = true;
+  const total = files.length + yts.length;
+  let n = 0;
+  const t0 = Date.now();
+  const step = (t, i) => {
+    const eta = i ? Math.round((Date.now() - t0) / i * (total - i) / 1000) : null;
+    $('#anStatus').textContent = `Analyzing ${i + 1}/${total}: ${t.title || t.id}${eta != null ? ` · ~${fmtTime(eta)} left` : ''}`;
+    $('#anBar').style.width = (i / total * 100) + '%';
+  };
+  for (const t of files) {
+    if (AN.cancel) break;
+    step(t, n); t.status = 'analyzing'; renderLib();
+    try { await analyzeFile(t); log(`✓ ${t.title}: ${t.bpm} BPM, ${t.keyName} (${t.camelot})`, 'okl'); }
+    catch (e) { t.status = 'error'; t.error = 'could not decode: ' + e.message; log(`✗ ${t.title}: ${t.error}`, 'err'); }
+    n++; save(); render();
+  }
+  if (yts.length && !AN.cancel) {
+    $('#setup').hidden = false;
+    try { await startCapture(); }
+    catch (e) {
+      log(e.message, 'err');
+      toast(e.name === 'NotAllowedError' ? 'Tab sharing was cancelled' : e.message, 6000);
+      yts = [];
+    }
+    for (const t of yts) {
+      if (AN.cancel) break;
+      step(t, n); t.status = 'analyzing'; renderLib();
+      try {
+        await analyzeYouTube(t);
+        log(`✓ ${t.title}: ${t.bpm} BPM${t.bpmConf < 0.3 ? ' (low confidence)' : ''}, ${t.keyName} (${t.camelot})`, 'okl');
+      } catch (e) {
+        if (e.message === 'cancelled') { t.status = 'pending'; break; }
+        if (e.message === 'SILENT') {
+          t.status = 'pending';
+          log('No audio captured. Did you share this tab with “Also share tab audio”?', 'err');
+          toast('No audio was captured. Share THIS tab and keep “Also share tab audio” checked.', 7000);
+          break;
+        }
+        t.status = 'error'; t.error = e.message;
+        log(`✗ ${t.title || t.id}: ${e.message}`, 'err');
+      }
+      n++; save(); render();
+    }
+    try { AN.player.stopVideo(); } catch {}
+    stopCapture();
+  }
+  AN.running = false;
+  $('#btnCancel').hidden = true; $('#btnAnalyze').disabled = false;
+  $('#anBar').style.width = (n / total * 100) + '%';
+  $('#anStatus').textContent = AN.cancel ? `Stopped after ${n}/${total}` : `Done: ${n} track${n === 1 ? '' : 's'} analyzed`;
+  if (!S.set.length) buildSet();
+  else { const extra = S.order.filter(id => ready(S.tracks[id]) && !S.set.includes(id)).length; if (extra) toast(`${extra} analyzed track${extra === 1 ? '' : 's'} aren't in the set yet. Use “Rebuild from library” or the tempo groups to add them.`, 5000); }
+  save(); render(); syncDecks();
+}
+
+// ---------------------------------------------------------------- set building
+function dedupe(ids, keep = []) {
+  if (!S.settings.dedupe) return ids;
+  const seen = new Set(keep.map(id => Core.titleKey(S.tracks[id].title)).filter(Boolean));
+  return ids.filter(id => {
+    const k = Core.titleKey(S.tracks[id].title);
+    if (!k) return true;
+    if (seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  });
+}
+
+// Reorders `pool` after the played/current part of the set (which stays fixed).
+function arrange(pool) {
+  if (D.fading) { toast('Wait for the mix to finish'); return; }
+  const started = D.started && S.pos >= 0;
+  const keep = started ? S.set.slice(0, S.pos + 1) : [];
+  const cur = keep[keep.length - 1];
+  const rest = dedupe([...new Set(pool)].filter(id => !keep.includes(id) && ready(S.tracks[id])), keep);
+  if (cur) {
+    const ordered = Core.orderTracks([cur, ...rest].map(id => S.tracks[id]), true, opts()).map(t => t.id);
+    S.set = keep.slice(0, -1).concat(ordered);
+  } else {
+    S.set = Core.orderTracks(rest.map(id => S.tracks[id]), false, opts()).map(t => t.id);
+    S.pos = -1;
+  }
+  save(); render(); syncDecks();
+}
+const buildSet = () => arrange(S.order);
+const reorderUpcoming = () => arrange(D.started ? S.set.slice(S.pos + 1) : S.set);
+
+function insertNext(id) {
+  if (D.fading) return toast('Wait for the mix to finish');
+  const base = D.started ? S.pos : Math.max(S.pos, 0);
+  const i = S.set.indexOf(id);
+  if (i >= 0 && i <= base) return toast('That track is already playing or played');
+  if (i >= 0) S.set.splice(i, 1);
+  S.set.splice(base + 1, 0, id);
+  save(); render(); syncDecks();
+}
+function appendOrdered(ids) {
+  const fresh = dedupe(ids.filter(id => !S.set.includes(id) && ready(S.tracks[id])), S.set);
+  if (!fresh.length) return toast('Those tracks are already in the set');
+  const last = S.set[S.set.length - 1];
+  const ordered = last
+    ? Core.orderTracks([last, ...fresh].map(id => S.tracks[id]), true, opts()).slice(1)
+    : Core.orderTracks(fresh.map(id => S.tracks[id]), false, opts());
+  S.set.push(...ordered.map(t => t.id));
+  toast(`Added ${fresh.length} track${fresh.length === 1 ? '' : 's'}`);
+  save(); render(); syncDecks();
+}
+
+// ---------------------------------------------------------------- decks
+const D = { decks: [], live: 0, x: 0, fading: false, abortFade: false, started: false, taps: [] };
+const ytEv = s => ({ 0: 'ended', 1: 'playing', 2: 'pause', 3: 'waiting', 5: 'cued' }[s] || 'other');
+
+class Deck {
+  constructor(i) {
+    this.i = i; this.trackId = null; this.kind = null; this.vol = -1; this.ytState = -1; this.ytReady = false; this.glide = 0;
+    this.el = document.getElementById('deck' + i);
+    this.audio = new Audio();
+    this.audio.preload = 'auto';
+    this.audio.preservesPitch = true;
+    for (const ev of ['playing', 'pause', 'ended', 'waiting']) this.audio.addEventListener(ev, () => onDeckEvent(this, ev));
+    this.audio.addEventListener('error', () => { if (this.kind === 'file' && this.audio.getAttribute('src')) onDeckEvent(this, 'error', 'could not play file'); });
+  }
+  // The YouTube player is attached once the iframe API loads; local files work without it.
+  attachYT() {
+    this.yt = makePlayer('yt' + this.i, {
+      onReady: () => {
+        this.ytReady = true; this.yt.unMute(); this.vol = -1;
+        if (this.kind === 'yt') this.yt.cueVideoById({ videoId: this.trackId, startSeconds: +S.settings.introSec });
+        applyVolumes(); syncDecks();
+      },
+      onStateChange: e => {
+        this.ytState = e.data;
+        // playVideo() issued while a cue is still loading can be dropped; retry once the cue lands.
+        if (this.wantPlay && e.data === 5) this.yt.playVideo();
+        if (e.data === 1 || e.data === 0) this.wantPlay = false;
+        if (this.kind === 'yt') onDeckEvent(this, ytEv(e.data));
+      },
+      onError: e => { this.wantPlay = false; if (this.kind === 'yt') onDeckEvent(this, 'error', ytErr(e.data)); },
+    });
+  }
+  get track() { return this.trackId ? S.tracks[this.trackId] : null; }
+  get playing() { return this.kind === 'file' ? !this.audio.paused && !this.audio.ended : this.kind === 'yt' && this.ytState === 1; }
+  get busy() { return this.playing || (this.kind === 'yt' && this.ytState === 3); }
+  load(id) {
+    this.stop();
+    this.trackId = id || null; this.kind = null; this.vol = -1; this.glide++;
+    this.audio.playbackRate = 1;
+    const t = this.track;
+    if (t) {
+      const start = +S.settings.introSec;
+      if (t.kind === 'file') {
+        const loc = LOCAL.get(id);
+        if (!loc) { this.trackId = null; return; }
+        this.kind = 'file';
+        {
+          this.audio.src = loc.url;
+          this.audio.addEventListener('loadedmetadata', () => { try { this.audio.currentTime = Math.min(start, Math.max(0, this.audio.duration - 5)); } catch {} }, { once: true });
+        }
+      } else {
+        this.kind = 'yt';
+        if (this.ytReady) this.yt.cueVideoById({ videoId: id, startSeconds: start });
+      }
+    }
+    applyVolumes();
+  }
+  play() {
+    if (this.kind === 'file') this.audio.play().catch(e => onDeckEvent(this, 'error', e.message));
+    else if (this.kind === 'yt') { if (this.ytReady) { this.wantPlay = true; this.yt.playVideo(); } else toast('YouTube player is still loading…'); }
+  }
+  pause() { this.wantPlay = false; if (this.kind === 'file') this.audio.pause(); else if (this.kind === 'yt' && this.ytReady) this.yt.pauseVideo(); }
+  stop() {
+    this.wantPlay = false;
+    this.audio.pause();
+    if (this.audio.getAttribute('src')) { this.audio.removeAttribute('src'); this.audio.load(); }
+    if (this.ytReady) try { this.yt.stopVideo(); } catch {}
+  }
+  time() { return this.kind === 'file' ? this.audio.currentTime || 0 : this.kind === 'yt' && this.ytReady ? this.yt.getCurrentTime() || 0 : 0; }
+  duration() { return this.kind === 'file' ? this.audio.duration || 0 : this.kind === 'yt' && this.ytReady ? this.yt.getDuration() || 0 : 0; }
+  seek(s) { if (this.kind === 'file') this.audio.currentTime = s; else if (this.kind === 'yt' && this.ytReady) this.yt.seekTo(s, true); }
+  rate() { return this.kind === 'file' ? this.audio.playbackRate : 1; }
+  setVolume(v) {
+    if (v === this.vol) return;
+    this.vol = v;
+    this.audio.volume = v / 100;
+    if (this.ytReady) this.yt.setVolume(v);
+  }
+  async glideTo(target, ms) {
+    const id = ++this.glide, from = this.audio.playbackRate, t0 = performance.now();
+    while (id === this.glide) {
+      const k = Math.min(1, (performance.now() - t0) / ms);
+      this.audio.playbackRate = from + (target - from) * k;
+      if (k >= 1) break;
+      await sleep(100);
+    }
+  }
+}
+
+function deckHTML(i) {
+  return `<div class="deck no-track" id="deck${i}">
+    <div class="deck-head"><span class="deck-letter">${'AB'[i]}</span><span class="role"></span><span class="bpm-big"></span></div>
+    <div class="video"><div id="yt${i}"></div><div class="empty">Nothing loaded</div><div class="disc-wrap"><div class="disc"></div></div></div>
+    <div class="meta">
+      <div class="title"></div><div class="author"></div><div class="badges"></div>
+      <canvas class="wave" title="Click to jump"></canvas>
+      <div class="prog"><div class="bar"><i></i></div><span class="time">0:00</span></div>
+      <div class="ctl">
+        <button class="b-play">▶ Play</button>
+        <button class="b-tap" title="Tap along to the beat to correct the BPM">Tap BPM</button><span class="tapv"></span><button class="b-tapok" hidden>Use</button>
+        <button class="b-skip" title="Remove from the set and queue the following track">Skip ⏭</button>
+      </div>
+    </div></div>`;
+}
+
+
+function applyVolumes() {
+  if (D.decks.length < 2) return;
+  const m = +S.settings.master;
+  D.decks[0].setVolume(Math.round(Math.cos(D.x * Math.PI / 2) * m));
+  D.decks[1].setVolume(Math.round(Math.sin(D.x * Math.PI / 2) * m));
+}
+const liveEnd = () => (D.live ? 1 : 0);
+
+// Keep the decks loaded with set[pos] (before start) and set[pos+1] (up next).
+// Tracks that can't play right now (e.g. local files not re-added yet) are skipped, not removed.
+const nextPlayable = from => { for (let i = from; i < S.set.length; i++) if (playable(S.tracks[S.set[i]])) return i; return -1; };
+function syncDecks() {
+  if (D.decks.length < 2 || D.fading) return;
+  const cue = (d, id) => { if (d.trackId !== (id || null)) d.load(id); };
+  let base = Math.max(S.pos, 0);
+  if (!D.started) { base = nextPlayable(base); cue(D.decks[D.live], base >= 0 ? S.set[base] : null); }
+  const ni = base >= 0 ? nextPlayable(base + 1) : -1;
+  cue(D.decks[1 - D.live], ni >= 0 ? S.set[ni] : null);
+  renderDecks(); renderMixer();
+}
+
+function startSet() {
+  if (!S.set.length) buildSet();
+  if (!S.set.length) return toast('Add and analyze some tracks first');
+  S.pos = nextPlayable(Math.min(Math.max(S.pos, 0), S.set.length - 1));
+  if (S.pos < 0) S.pos = nextPlayable(0);
+  if (S.pos < 0) return toast('None of the set’s tracks are playable. Re-add your local files.');
+  syncDecks();
+  D.started = true;
+  D.x = liveEnd();
+  applyVolumes();
+  D.decks[D.live].play();
+  save(); render();
+}
+
+function completeTransition() {
+  const old = D.decks[D.live], nd = D.decks[1 - D.live];
+  old.stop(); old.trackId = null; old.kind = null;
+  D.live = nd.i; D.x = liveEnd(); D.fading = false;
+  applyVolumes();
+  let idx = S.set.indexOf(nd.trackId, S.pos + 1);
+  if (idx !== S.pos + 1) {
+    if (idx >= 0) S.set.splice(idx, 1);
+    S.set.splice(S.pos + 1, 0, nd.trackId);
+  }
+  S.pos = S.pos + 1;
+  if (S.settings.glideBack && nd.rate() !== 1) nd.glideTo(1, 12000);
+  save(); render();
+  setTimeout(syncDecks, 600);
+}
+
+// Hard cut with no overlap: stop the outgoing track, then start the next one.
+function cutToNext() {
+  const nd = D.decks[1 - D.live];
+  if (!nd.trackId) return;
+  D.decks[D.live].pause();
+  D.x = 1 - liveEnd();
+  applyVolumes();
+  nd.play();
+  completeTransition();
+}
+
+// Local→local: match tempo, start the incoming track on a beat, then phase-lock it during the fade.
+// Returns a lock with step() (called every fade tick) or null when sync doesn't apply.
+async function beatSyncStart(out, inc) {
+  const a = out.track, b = inc.track;
+  if (!(S.settings.beatSync && out.kind === 'file' && inc.kind === 'file' && out.playing && a?.bpm && b?.bpm && a.beatOffset != null && b.beatOffset != null)) return null;
+  let fold = 1;
+  for (const k of [2, 0.5]) if (Math.abs(Math.log(a.bpm * out.rate() / b.bpm * k)) < Math.abs(Math.log(a.bpm * out.rate() / b.bpm))) fold = k;
+  // The outgoing deck may still be gliding back from the previous mix, so follow its live rate.
+  const target = () => a.bpm * out.rate() / b.bpm * fold;
+  const ratio = target();
+  if (Math.abs(ratio - 1) > 0.08) return null;
+  try { await waitUntil(() => inc.audio.readyState >= 3, 4000, 50); } catch { return null; }
+  inc.audio.playbackRate = ratio;
+  const PA = 60 / a.bpm, PB = 60 / b.bpm;
+  const phaseErr = () => frac((inc.time() - b.beatOffset) / PB - (out.time() - a.beatOffset) / PA + 0.5) - 0.5; // beats, + = incoming ahead
+  let wait = frac(-phaseErr()) * PA / out.rate();
+  if (wait < 0.08) wait += PA / out.rate();
+  await sleep(wait * 1000 - 12);
+  inc.play();
+  // Start latency varies, so the remaining error is pulled in by nudging tempo a few percent
+  // (seeking would stall playback and add error of its own).
+  // Writing playbackRate restarts Chrome's time-stretcher, so update rarely and only on real change.
+  let ema = null, ticks = 0;
+  const setRate = r => { if (Math.abs(inc.audio.playbackRate - r) > 0.0008) inc.audio.playbackRate = r; };
+  return {
+    ratio,
+    step() {
+      if (!inc.playing || !out.playing || ++ticks % 4) return;
+      const errSec = phaseErr() * PB;
+      ema = ema == null ? errSec : ema * 0.5 + errSec * 0.5;
+      const corr = Math.abs(ema) < 0.01 ? 0 : Math.round(Math.max(-0.06, Math.min(0.06, ema * 0.6)) * 200) / 200;
+      setRate(target() * (1 - corr));
+    },
+    done() { inc.audio.playbackRate = target(); },
+  };
+}
+
+async function mixNow() {
+  if (D.fading || !D.started) return;
+  const out = D.decks[D.live], inc = D.decks[1 - D.live];
+  if (!inc.trackId) return toast('Nothing queued up next');
+  if (+S.settings.fadeSec === 0) return cutToNext();
+  D.fading = true; D.abortFade = false;
+  renderMixer(); renderDecks();
+  const restore = msg => {
+    D.fading = false; D.x = liveEnd(); applyVolumes();
+    inc.pause();
+    if (msg) toast(msg);
+    render(); setTimeout(syncDecks, 300);
+  };
+  let lock = null;
+  if (!inc.playing) {
+    lock = await beatSyncStart(out, inc);
+    if (!lock) inc.play();
+    try { await waitUntil(() => inc.playing || D.abortFade, 8000, 50); } catch {}
+  }
+  if (D.abortFade || !inc.playing) return restore(D.abortFade ? '' : "Next track didn't start");
+  const from = D.x, to = 1 - liveEnd(), ms = +S.settings.fadeSec * 1000, t0 = performance.now();
+  // setTimeout rather than requestAnimationFrame: rAF stops when the tab is in the background.
+  for (;;) {
+    if (D.abortFade) return restore('');
+    const k = Math.min(1, (performance.now() - t0) / ms);
+    D.x = from + (to - from) * k;
+    applyVolumes();
+    lock?.step();
+    $('#fader').value = D.x;
+    if (k >= 1) break;
+    await sleep(50);
+  }
+  lock?.done();
+  completeTransition();
+}
+
+function onDeckEvent(d, ev, msg) {
+  if (ev === 'error') {
+    const t = d.track;
+    if (t) {
+      if (t.kind !== 'file' || LOCAL.has(t.id)) { t.status = 'error'; t.error = msg; }
+      toast(`Can't play “${t.title || t.id}”: ${msg}`, 5000);
+    }
+    if (d.i !== D.live) {
+      if (D.fading) D.abortFade = true;
+      const idx = S.set.indexOf(d.trackId, Math.max(S.pos, 0) + 1);
+      if (idx >= 0) S.set.splice(idx, 1);
+      d.trackId = null; d.kind = null;
+      save();
+      setTimeout(syncDecks, 400);
+    } else if (D.started && !D.fading && D.decks[1 - D.live].trackId) cutToNext();
+    render();
+    return;
+  }
+  if (ev === 'playing' && d.i === D.live && !D.started) {
+    // The user pressed play inside the embedded player before hitting Start.
+    D.started = true; S.pos = Math.max(S.pos, 0); D.x = liveEnd(); applyVolumes(); save(); render();
+  }
+  if (ev === 'ended' && d.i === D.live && D.started && !D.fading && D.decks[1 - D.live].trackId) cutToNext();
+  renderDecks(); renderMixer();
+}
+
+function tick() {
+  if (D.decks.length < 2) return;
+  for (const d of D.decks) {
+    const cur = d.time(), dur = d.duration();
+    d.el.querySelector('.bar i').style.width = (dur ? cur / dur * 100 : 0) + '%';
+    d.el.querySelector('.time').textContent = d.trackId ? `${fmtTime(cur)} / -${fmtTime(dur - cur)}` : '';
+    d.el.classList.toggle('spinning', d.playing);
+    const t = d.track, r = d.rate();
+    d.el.querySelector('.bpm-big').innerHTML = t?.bpm
+      ? `${(t.bpm * r).toFixed(2)}<small>BPM</small>${r !== 1 ? `<em>${r > 1 ? '+' : ''}${(r * 100 - 100).toFixed(1)}%</em>` : ''}`
+      : '';
+    drawWave(d);
+  }
+  const out = D.decks[D.live], inc = D.decks[1 - D.live];
+  if (S.settings.autoMix && D.started && !D.fading && out.playing && inc.trackId) {
+    const dur = out.duration(), cur = out.time();
+    const remaining = (dur - cur) / out.rate();
+    if (dur > 0 && cur > 3 && remaining <= +S.settings.outroSec + +S.settings.fadeSec) mixNow();
+  }
+}
+
+// ---------------------------------------------------------------- rendering
+function camBadge(t, act = '') {
+  if (!t?.camelot) return `<span class="badge" ${act}>key ?</span>`;
+  const n = parseInt(t.camelot, 10), l = t.camelot.endsWith('B');
+  return `<span class="cam" style="--h:${(n - 1) * 30};--l:${l ? 70 : 58}%" title="${esc(t.keyName)}${t.keyConf != null && t.keyConf < 0.2 ? ' (low confidence)' : ''}" ${act}>${t.camelot}</span>`;
+}
+const kindBadge = t => (t.kind === 'file' ? '<span class="kind file">FILE</span>' : '<span class="kind">YT</span>');
+function transHTML(a, b) {
+  const br = Core.bpmRel(a, b), kr = Core.keyRel(a, b), q = Core.quality(Core.transCost(a, b, opts()));
+  return { q, br, kr, html: `<span class="tx ${q}" title="${esc(br.label + ' · ' + kr.label)}">${esc(br.label)}</span>` };
+}
+
+function renderStats() {
+  const ts = Object.values(S.tracks);
+  const c = s => ts.filter(t => t.status === s).length;
+  const missing = ts.filter(t => t.kind === 'file' && !LOCAL.has(t.id)).length;
+  $('#stats').textContent = ts.length
+    ? `${ts.length} tracks · ${c('done')} analyzed · ${c('pending')} pending${c('error') ? ` · ${c('error')} failed` : ''}${missing ? ` · ${missing} local files to re-add` : ''} · set ${S.set.length}`
+    : 'Add playlists or audio files to begin';
+}
+
+function renderDecks() {
+  for (const d of D.decks) {
+    const isNow = d.i === D.live, t = d.track, el = d.el;
+    el.style.gridArea = isNow ? 'now' : 'next';
+    el.classList.toggle('now', isNow);
+    el.classList.toggle('mixing', D.fading);
+    el.classList.toggle('no-track', !t);
+    el.classList.toggle('is-file', d.kind === 'file');
+    el.classList.toggle('has-wave', d.kind === 'file' && !!t?.peaks);
+    el.querySelector('.role').textContent = D.fading ? (isNow ? 'MIXING OUT' : 'MIXING IN') : isNow ? (D.started ? 'NOW PLAYING' : 'READY') : 'UP NEXT';
+    el.querySelector('.title').textContent = t ? t.title || t.id : isNow ? 'Nothing loaded' : 'Nothing queued';
+    el.querySelector('.author').textContent = t ? t.author || '' : '';
+    el.querySelector('.badges').innerHTML = t
+      ? `${kindBadge(t)}<span class="badge">${t.bpm ? t.bpm.toFixed(1) + ' BPM' : 'BPM ?'}</span>${camBadge(t)}${t.keyName ? `<span class="badge">${esc(t.keyName)}</span>` : ''}`
+      : '';
+    el.querySelector('.b-play').textContent = d.playing ? '❚❚ Pause' : '▶ Play';
+  }
+}
+
+function renderMixer() {
+  const a = D.decks[D.live]?.track, b = D.decks[1 - D.live]?.track;
+  let html = '<span class="dim">Queue two tracks to see how they blend.</span>';
+  if (a && b) {
+    const t = transHTML(a, b);
+    const col = { good: 'var(--good)', ok: 'var(--ok)', bad: 'var(--bad)' }[t.q];
+    html = `<div><span class="q" style="background:${col}"></span><b>${{ good: 'Smooth blend', ok: 'Workable', bad: 'Rough transition' }[t.q]}</b></div>
+      <div class="mono" style="margin-top:4px">${a.bpm ? a.bpm.toFixed(1) : '?'} → ${b.bpm ? b.bpm.toFixed(1) : '?'} BPM <span class="dim">(${esc(t.br.label)})</span></div>
+      <div class="mono">${a.camelot || '?'} → ${b.camelot || '?'} <span class="dim">${esc(t.kr.label)}</span></div>`;
+  } else if (a && !b) html = '<span class="dim">Nothing queued after this track.</span>';
+  $('#transInfo').innerHTML = html;
+  $('#btnStart').hidden = D.started;
+  $('#btnStart').textContent = S.pos > 0 ? `▶ Resume set at #${S.pos + 1}` : '▶ Start set';
+  const mix = $('#btnMix');
+  mix.hidden = !D.started;
+  mix.disabled = D.fading || !b;
+  mix.classList.toggle('fading', D.fading);
+  mix.textContent = D.fading ? 'MIXING…' : +S.settings.fadeSec === 0 ? 'CUT ▸' : 'MIX ▸';
+  $('#fadeL').classList.toggle('on', D.live === 0);
+  $('#fadeR').classList.toggle('on', D.live === 1);
+  if (!faderDragging) $('#fader').value = D.x;
+}
+
+function renderSet() {
+  const el = $('#setView');
+  if (!S.set.length) {
+    el.innerHTML = `<div class="emptymsg">No set yet. Analyze some tracks and a set is built automatically, or press <b>Rebuild from library</b>.</div>`;
+    return;
+  }
+  const pos = D.started ? S.pos : Math.max(S.pos, 0) - 1;
+  el.innerHTML = S.set.map((id, i) => {
+    const t = S.tracks[id] || { id, title: id };
+    const prev = i > 0 ? S.tracks[S.set[i - 1]] : null;
+    const cls = i < pos ? 'played' : i === pos ? 'current' : i === pos + 1 ? 'next' : '';
+    const movable = i > pos + (D.fading ? 1 : 0);
+    return `<div class="trow ${cls}" data-i="${i}" ${movable ? 'draggable="true"' : ''}>
+      <span class="num">${i + 1}</span><span class="kindc">${kindBadge(t)}</span>
+      <span class="tt"><b>${esc(t.title || t.id)}</b><small>${esc(t.author)}</small></span>
+      <span class="tbpm ${t.bpmConf != null && t.bpmConf < 0.3 ? 'low' : ''}" data-act="bpm" title="Click to edit BPM">${t.bpm ? t.bpm.toFixed(1) : '—'}</span>
+      ${camBadge(t, 'data-act="key"')}
+      <span>${prev ? transHTML(prev, t).html : ''}</span>
+      <span class="acts">${movable ? `<button data-act="next" title="Play next">⤒</button>` : ''}<button data-act="half" title="Halve BPM">½</button><button data-act="dbl" title="Double BPM">×2</button>${movable ? `<button data-act="rm" title="Remove from set">✕</button>` : ''}</span>
+    </div>`;
+  }).join('');
+  el.querySelector('.current, .next')?.scrollIntoView({ block: 'nearest' });
+}
+
+function renderLib() {
+  const el = $('#libView');
+  if ($('#tabLib').hidden) return;
+  const q = $('#libSearch').value.trim().toLowerCase(), f = $('#libFilter').value;
+  const rows = S.order.map(id => S.tracks[id]).filter(t => {
+    if (q && !(t.title + ' ' + t.author).toLowerCase().includes(q)) return false;
+    if (f === 'yt' || f === 'file') return (t.kind || 'yt') === f;
+    if (f === 'pending' || f === 'error') return t.status === f;
+    return true;
+  });
+  if (!rows.length) { el.innerHTML = `<div class="emptymsg">${S.order.length ? 'No matches' : 'Library is empty'}</div>`; return; }
+  el.innerHTML = rows.slice(0, 1000).map(t => {
+    const missing = t.kind === 'file' && !LOCAL.has(t.id);
+    const st = missing ? 'missing' : t.status;
+    const label = missing ? 're-add file' : st === 'error' ? 'failed' : st;
+    const inSet = S.set.indexOf(t.id);
+    return `<div class="trow" data-id="${esc(t.id)}">
+      <span class="num">${inSet >= 0 ? '#' + (inSet + 1) : ''}</span><span class="kindc">${kindBadge(t)}</span>
+      <span class="tt"><b>${esc(t.title || t.id)}</b><small>${esc(t.author)}${t.sources?.length ? ' · ' + esc(t.sources.join(', ')) : ''}</small></span>
+      <span class="tbpm" data-act="bpm">${t.bpm ? t.bpm.toFixed(1) : '—'}</span>
+      ${camBadge(t, 'data-act="key"')}
+      <span class="status ${st}" title="${esc(t.error || '')}">${esc(label)}</span>
+      <span class="acts">${ready(t) ? `<button data-act="next" title="Play next">⤒</button><button data-act="add" title="Append to set">+</button>` : ''}<button data-act="re" title="Re-analyze">↻</button><button data-act="del" title="Remove from library">✕</button></span>
+    </div>`;
+  }).join('');
+}
+
+function setBase() {
+  if (D.started) return D.decks[D.live].track;
+  return S.tracks[S.set[Math.max(S.pos, 0)]] || null;
+}
+
+function renderGroups() {
+  const groups = Core.tempoGroups(S.order.map(id => S.tracks[id]).filter(ready));
+  window._groups = groups;
+  const el = $('#groups');
+  if (!groups.length) { el.innerHTML = '<div class="dim">Tempo groups appear here once tracks are analyzed.</div>'; return; }
+  const max = Math.max(...groups.map(g => g.ids.length)), base = setBase();
+  el.innerHTML = groups.map((g, i) => {
+    const keys = {};
+    for (const id of g.ids) { const c = S.tracks[id].camelot; if (c) keys[c] = (keys[c] || 0) + 1; }
+    const top = Object.entries(keys).sort((a, b) => b[1] - a[1]).slice(0, 8);
+    const cur = base && g.ids.includes(base.id);
+    return `<div class="grp ${cur ? 'cur' : ''}">
+      <div class="grp-top"><span><b>${g.lo.toFixed(0)}${g.hi.toFixed(0) !== g.lo.toFixed(0) ? '–' + g.hi.toFixed(0) : ''}</b> <span class="dim">BPM</span></span><span class="dim">${g.ids.length} track${g.ids.length === 1 ? '' : 's'}${cur ? ' · playing' : ''}</span></div>
+      <div class="grp-bar" style="width:${Math.max(6, g.ids.length / max * 100)}%"></div>
+      <div class="grp-keys">${top.map(([c, n]) => camBadge(S.tracks[g.ids.find(id => S.tracks[id].camelot === c)]).replace('</span>', n > 1 ? ` ×${n}</span>` : '</span>')).join('')}</div>
+      <div class="grp-act"><button data-g="${i}" data-act="gset" title="Replace upcoming tracks with this group">Play this group</button><button data-g="${i}" data-act="gadd" title="Append this group to the end of the set">+ Append</button></div>
+    </div>`;
+  }).join('');
+}
+
+function renderSuggest() {
+  const el = $('#suggest'), base = setBase();
+  if (!base) { el.innerHTML = '<div class="dim">Suggestions for what to play next show up once a track is loaded.</div>'; return; }
+  const played = new Set(S.set.slice(0, Math.max(S.pos, 0) + 1));
+  const o = opts();
+  const cands = S.order.map(id => S.tracks[id])
+    .filter(t => ready(t) && t.id !== base.id && !played.has(t.id))
+    .map(t => ({ t, c: Core.transCost(base, t, o) }))
+    .sort((a, b) => a.c - b.c).slice(0, 8);
+  if (!cands.length) { el.innerHTML = '<div class="dim">No other analyzed tracks.</div>'; return; }
+  el.innerHTML = `<div class="dim" style="font-size:12px;margin-bottom:4px">After “${esc(base.title || base.id)}”</div>` + cands.map(({ t }) => {
+    const tr = transHTML(base, t), i = S.set.indexOf(t.id);
+    return `<div class="sug" data-id="${esc(t.id)}">
+      <div class="tt"><b>${esc(t.title || t.id)}</b><div class="meta2">${kindBadge(t)}<span class="mono">${t.bpm.toFixed(1)}</span>${camBadge(t)}${tr.html}<span class="dim">${esc(tr.kr.label)}</span>${i >= 0 ? `<span class="dim">· #${i + 1}</span>` : ''}</div></div>
+      <div class="acts"><button data-act="next" title="Play next">Next</button>${i < 0 ? '<button data-act="add" title="Append to set">+</button>' : ''}</div>
+    </div>`;
+  }).join('');
+}
+
+function render() { renderStats(); renderDecks(); renderMixer(); renderSet(); renderLib(); renderGroups(); renderSuggest(); }
+
+// ---------------------------------------------------------------- track edits
+function editBpm(t) {
+  const v = prompt(`BPM for “${t.title || t.id}”`, t.bpm || '');
+  if (v == null) return;
+  const n = parseFloat(v);
+  if (!(n > 30 && n < 300)) return toast('Enter a BPM between 30 and 300');
+  t.bpm = Math.round(n * 10) / 10; t.bpmConf = 1;
+  if (t.status === 'pending') t.status = 'done';
+  save(); render();
+}
+function editKey(t) {
+  const v = prompt(`Key for “${t.title || t.id}”: Camelot code (8A) or note name (Am, F#, Bb major)`, t.camelot || '');
+  if (v == null) return;
+  const k = Core.parseKey(v);
+  if (!k) return toast('Could not read that key');
+  setKey(t, k.tonic, k.minor); t.keyConf = 1;
+  save(); render();
+}
+function scaleBpm(t, f) { if (!t.bpm) return; t.bpm = Math.round(t.bpm * f * 10) / 10; save(); render(); }
+
+// ---------------------------------------------------------------- wiring
+let faderDragging = false;
+function bindSetting(id, key, { type = 'value', show, after } = {}) {
+  const el = document.getElementById(id);
+  const sync = () => { if (show) $(show[0]).textContent = show[1](S.settings[key]); };
+  if (type === 'checked') el.checked = !!S.settings[key]; else el.value = S.settings[key];
+  sync();
+  el.addEventListener(type === 'checked' || el.tagName === 'SELECT' ? 'change' : 'input', () => {
+    S.settings[key] = type === 'checked' ? el.checked : el.type === 'range' || el.type === 'number' ? +el.value : el.value;
+    sync(); save(); after?.();
+  });
+}
+
+function init() {
+  if (location.protocol === 'file:') $('#fileBanner').hidden = false;
+  $('#decks').insertAdjacentHTML('afterbegin', deckHTML(0) + deckHTML(1));
+  if (S.order.length) $('#setup').hidden = true;
+
+  bindSetting('optSample', 'sampleSec');
+  bindSetting('optSegments', 'segments');
+  bindSetting('optSpeed', 'speed');
+  bindSetting('optBpmMin', 'bpmMin', { show: ['#bpmMax', v => (v * 2) + ' BPM'] });
+  bindSetting('optMute', 'mute', { type: 'checked' });
+  bindSetting('optAuto', 'autoMix', { type: 'checked' });
+  bindSetting('optFade', 'fadeSec', { show: ['#vFade', v => (+v === 0 ? 'cut' : v + ' s')], after: renderMixer });
+  bindSetting('optOutro', 'outroSec', { show: ['#vOutro', v => v + ' s'] });
+  bindSetting('optIntro', 'introSec', { show: ['#vIntro', v => v + ' s'] });
+  bindSetting('optMaster', 'master', { show: ['#vMaster', v => v + '%'], after: () => { D.decks.forEach(d => (d.vol = -1)); applyVolumes(); } });
+  bindSetting('optSync', 'beatSync', { type: 'checked' });
+  bindSetting('optGlide', 'glideBack', { type: 'checked' });
+  bindSetting('optMode', 'mode', { after: render });
+  bindSetting('optKeyW', 'keyWeight', { after: render });
+  bindSetting('optDedupe', 'dedupe', { type: 'checked' });
+
+  $('#btnToggleSetup').onclick = () => { $('#setup').hidden = !$('#setup').hidden; };
+  $('#btnLoad').onclick = addFromInput;
+  $('#btnFiles').onclick = () => $('#fileInput').click();
+  $('#fileInput').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
+  $('#btnAnalyze').onclick = () => runAnalysis();
+  $('#btnRetry').onclick = () => {
+    let n = 0;
+    for (const t of Object.values(S.tracks)) if (t.status === 'error') { t.status = 'pending'; n++; }
+    toast(n ? `${n} failed track${n === 1 ? '' : 's'} marked pending` : 'No failed tracks');
+    save(); render();
+  };
+  $('#btnCancel').onclick = () => { AN.cancel = true; };
+  $('#btnStart').onclick = startSet;
+  $('#btnMix').onclick = mixNow;
+  $('#btnOrder').onclick = reorderUpcoming;
+  $('#btnBuild').onclick = () => { if (!S.set.length || D.started || confirm('Replace the set with every analyzed track in the library?')) buildSet(); };
+  $('#btnClear').onclick = () => {
+    if (D.fading) return;
+    if (!confirm(D.started ? 'Clear all upcoming tracks?' : 'Clear the set?')) return;
+    S.set = D.started ? S.set.slice(0, S.pos + 1) : [];
+    if (!D.started) S.pos = -1;
+    save(); render(); syncDecks();
+  };
+  $('#btnLibClear').onclick = () => {
+    if (D.started) return toast('Not while a set is playing');
+    if (!confirm('Remove every track and its analysis from the library?')) return;
+    S.tracks = {}; S.order = []; S.set = []; S.pos = -1;
+    save(); render(); syncDecks();
+  };
+  $('#libSearch').oninput = renderLib;
+  $('#libFilter').onchange = renderLib;
+  for (const b of $$('.tabs button')) b.onclick = () => {
+    $$('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+    $('#tabSet').hidden = b.dataset.tab !== 'set';
+    $('#tabLib').hidden = b.dataset.tab !== 'lib';
+    renderLib();
+  };
+
+  // crossfader
+  const fader = $('#fader');
+  fader.addEventListener('pointerdown', () => (faderDragging = true));
+  window.addEventListener('pointerup', () => (faderDragging = false));
+  fader.addEventListener('input', () => {
+    const inc = D.decks[1 - D.live];
+    if (D.fading || !D.started || !inc.trackId) { fader.value = D.x; return; }
+    D.x = +fader.value;
+    if (Math.abs(D.x - liveEnd()) > 0.02 && !inc.busy) inc.play();
+    applyVolumes();
+    if (Math.abs(D.x - (1 - liveEnd())) < 0.01) completeTransition();
+  });
+  fader.addEventListener('change', () => {
+    faderDragging = false;
+    if (!D.started || D.fading || Math.abs(D.x - liveEnd()) >= 0.02) return;
+    D.x = liveEnd(); applyVolumes();
+    const inc = D.decks[1 - D.live];
+    if (inc.busy) { inc.pause(); inc.seek(+S.settings.introSec); }
+  });
+
+  // deck buttons
+  $('#decks').addEventListener('click', e => {
+    const deckEl = e.target.closest('.deck');
+    if (!deckEl) return;
+    const d = D.decks[+deckEl.id.slice(4)];
+    if (e.target.closest('.b-play')) {
+      if (!D.started) return startSet();
+      d.playing ? d.pause() : d.play();
+    } else if (e.target.closest('.b-skip')) {
+      if (D.fading || !d.trackId) return;
+      const idx = S.set.indexOf(d.trackId, Math.max(S.pos, 0) + 1);
+      if (idx >= 0) S.set.splice(idx, 1);
+      save(); render(); syncDecks();
+    } else if (e.target.closest('.b-tap')) {
+      const now = performance.now();
+      if (D.taps.length && now - D.taps[D.taps.length - 1] > 2000) D.taps = [];
+      D.taps.push(now);
+      if (D.taps.length >= 4) {
+        const iv = D.taps.slice(1).map((t, i) => t - D.taps[i]).sort((a, b) => a - b);
+        D.tapBpm = Math.round(60000 / iv[iv.length >> 1] * 10) / 10;
+        deckEl.querySelector('.tapv').textContent = D.tapBpm + ' BPM';
+        deckEl.querySelector('.b-tapok').hidden = false;
+      } else deckEl.querySelector('.tapv').textContent = `${D.taps.length}…`;
+    } else if (e.target.closest('.b-tapok')) {
+      const t = d.track;
+      if (t && D.tapBpm) { t.bpm = D.tapBpm; t.bpmConf = 1; if (t.status === 'pending') t.status = 'done'; save(); render(); toast(`BPM set to ${D.tapBpm}`); }
+      D.taps = []; deckEl.querySelector('.tapv').textContent = ''; e.target.hidden = true;
+    } else if (e.target.closest('.bar, .wave') && d.i === D.live && d.trackId) {
+      const r = e.target.closest('.bar, .wave').getBoundingClientRect();
+      d.seek((e.clientX - r.left) / r.width * d.duration());
+    }
+  });
+
+  // set list actions + drag reorder
+  const setView = $('#setView');
+  setView.addEventListener('click', e => {
+    const row = e.target.closest('.trow'), act = e.target.closest('[data-act]')?.dataset.act;
+    if (!row || !act) return;
+    const i = +row.dataset.i, t = S.tracks[S.set[i]];
+    if (act === 'bpm') editBpm(t);
+    else if (act === 'key') editKey(t);
+    else if (act === 'half') scaleBpm(t, 0.5);
+    else if (act === 'dbl') scaleBpm(t, 2);
+    else if (act === 'next') insertNext(t.id);
+    else if (act === 'rm') { S.set.splice(i, 1); save(); render(); syncDecks(); }
+  });
+  let dragFrom = -1;
+  setView.addEventListener('dragstart', e => {
+    const row = e.target.closest('.trow');
+    dragFrom = +row.dataset.i;
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', String(dragFrom));
+  });
+  setView.addEventListener('dragover', e => {
+    const row = e.target.closest('.trow[draggable]');
+    if (dragFrom < 0 || !row) return;
+    e.preventDefault();
+    $$('.drop-above').forEach(r => r.classList.remove('drop-above'));
+    row.classList.add('drop-above');
+  });
+  setView.addEventListener('drop', e => {
+    const row = e.target.closest('.trow[draggable]');
+    if (dragFrom < 0 || !row) return;
+    e.preventDefault();
+    let to = +row.dataset.i;
+    const [id] = S.set.splice(dragFrom, 1);
+    if (dragFrom < to) to--;
+    S.set.splice(to, 0, id);
+    dragFrom = -1;
+    save(); render(); syncDecks();
+  });
+  setView.addEventListener('dragend', () => { dragFrom = -1; $$('.drop-above').forEach(r => r.classList.remove('drop-above')); });
+
+  $('#libView').addEventListener('click', e => {
+    const row = e.target.closest('.trow'), act = e.target.closest('[data-act]')?.dataset.act;
+    if (!row || !act) return;
+    const t = S.tracks[row.dataset.id];
+    if (act === 'bpm') editBpm(t);
+    else if (act === 'key') editKey(t);
+    else if (act === 'next') insertNext(t.id);
+    else if (act === 'add') appendOrdered([t.id]);
+    else if (act === 're') { t.status = 'pending'; save(); render(); toast('Marked for re-analysis. Press “Analyze pending”.'); }
+    else if (act === 'del') {
+      if (D.decks.some(d => d.trackId === t.id) && D.started) return toast('That track is on a deck');
+      delete S.tracks[t.id];
+      S.order = S.order.filter(x => x !== t.id);
+      const i = S.set.indexOf(t.id);
+      if (i >= 0) { S.set.splice(i, 1); if (i <= S.pos) S.pos--; }
+      save(); render(); syncDecks();
+    }
+  });
+
+  $('#groups').addEventListener('click', e => {
+    const b = e.target.closest('[data-act]');
+    if (!b) return;
+    const g = window._groups[+b.dataset.g];
+    if (b.dataset.act === 'gset') arrange(g.ids);
+    else appendOrdered(g.ids);
+  });
+  $('#suggest').addEventListener('click', e => {
+    const b = e.target.closest('[data-act]'), id = e.target.closest('.sug')?.dataset.id;
+    if (!b || !id) return;
+    if (b.dataset.act === 'next') insertNext(id); else appendOrdered([id]);
+  });
+
+  // drop local files anywhere
+  let dragDepth = 0;
+  const hasFiles = e => [...(e.dataTransfer?.types || [])].includes('Files');
+  window.addEventListener('dragenter', e => { if (hasFiles(e)) { dragDepth++; document.body.classList.add('dragging'); $('#setup').hidden = false; } });
+  window.addEventListener('dragleave', e => { if (hasFiles(e) && --dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragging'); } });
+  window.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
+  window.addEventListener('drop', e => {
+    if (!hasFiles(e)) return;
+    e.preventDefault(); dragDepth = 0; document.body.classList.remove('dragging');
+    addFiles(e.dataTransfer.files);
+  });
+
+  window.addEventListener('keydown', e => {
+    if (e.target.closest('input,textarea,select')) return;
+    if (e.key === 'm' || e.key === 'M') { D.started ? mixNow() : startSet(); }
+  });
+  window.addEventListener('beforeunload', e => { if (D.started && D.decks.some(d => d.playing)) e.preventDefault(); });
+
+  D.decks = [new Deck(0), new Deck(1)];
+  render(); syncDecks();
+  ytReadyP.then(() => {
+    D.decks.forEach(d => d.attachYT());
+    AN.player = makePlayer('anPlayer', {
+      onReady: () => { AN.ready = true; },
+      onStateChange: e => { AN.state = e.data; if (e.data === 5) AN.cuedAt = Date.now(); },
+      onError: e => { AN.err = e.data; },
+    });
+    render();
+  });
+  const s = document.createElement('script');
+  s.src = 'https://www.youtube.com/iframe_api';
+  s.onerror = () => toast("Couldn't load the YouTube player API. Are you offline?", 8000);
+  document.head.appendChild(s);
+  setInterval(tick, 250);
+}
+init();
+</script>
+</body>
+</html>
