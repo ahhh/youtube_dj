@@ -330,15 +330,25 @@ try {
   const d = JSON.parse(localStorage.getItem(STORE_KEY));
   if (d) { Object.assign(S, d); S.settings = { ...DEFAULTS, ...d.settings }; }
 } catch {}
-for (const t of Object.values(S.tracks)) if (t.status === 'analyzing') t.status = 'pending';
+// Saved state may be hand-edited or from an older version: normalise before anything reads it.
+if (!S.tracks || typeof S.tracks !== 'object') S.tracks = {};
+S.order = (Array.isArray(S.order) ? S.order : []).filter(id => S.tracks[id]);
+S.set = (Array.isArray(S.set) ? S.set : []).filter(id => S.tracks[id]);
+for (const t of Object.values(S.tracks)) {
+  if (t.status === 'analyzing') t.status = 'pending';
+  if (!Array.isArray(t.sources)) t.sources = [];
+  if (!t.kind) t.kind = 'yt';
+}
 let saveT;
 function save() {
   clearTimeout(saveT);
   saveT = setTimeout(() => {
     try { localStorage.setItem(STORE_KEY, JSON.stringify({ tracks: S.tracks, order: S.order, set: S.set, pos: S.pos, settings: S.settings })); }
-    catch (e) { console.warn('save failed', e); }
+    catch (e) { console.warn('save failed', e); toast('Could not save your library (browser storage is full)', 6000); }
   }, 300);
 }
+const flushSave = () => { if (saveT) { clearTimeout(saveT); saveT = null; try { localStorage.setItem(STORE_KEY, JSON.stringify({ tracks: S.tracks, order: S.order, set: S.set, pos: S.pos, settings: S.settings })); } catch {} } };
+window.addEventListener('pagehide', flushSave);
 const opts = () => ({ mode: S.settings.mode, keyWeight: +S.settings.keyWeight });
 
 // Local files live only in memory for this session; analysis results persist by id.
@@ -460,9 +470,16 @@ const api = async (path, opts) => {
   return j;
 };
 
+// Back to a plain YouTube track (keeps its analysis) when the mp3 can't be served.
+function revertConverted(t) {
+  const list = t ? [t] : Object.values(S.tracks).filter(x => x.converted);
+  for (const x of list) { x.kind = 'yt'; x.converted = false; x.status = x.bpm ? 'done' : 'pending'; LOCAL.delete(x.id); }
+  if (!t) { save(); render(); syncDecks(); }
+}
+
 async function probeServer() {
-  if (location.protocol === 'file:') return;
-  try { await api('/api/health'); API.up = true; } catch { return; }
+  if (location.protocol === 'file:') { revertConverted(); return; }
+  try { await api('/api/health'); API.up = true; } catch { revertConverted(); return; }
   $('#convRow').hidden = false; $('#btnConvertAll').hidden = false;
   // Converted tracks survive reloads: re-attach the cached mp3, or fall back to YouTube if it was purged.
   for (const t of Object.values(S.tracks)) {
@@ -470,7 +487,7 @@ async function probeServer() {
     let st = null;
     try { st = await api('/api/status?id=' + encodeURIComponent(t.id)); } catch {}
     if (st?.state === 'done') LOCAL.set(t.id, { file: null, url: `/api/audio/${t.id}.mp3` });
-    else { t.kind = 'yt'; t.converted = false; t.status = t.bpm ? 'done' : 'pending'; }
+    else revertConverted(t);
   }
   save(); render(); syncDecks();
 }
@@ -495,7 +512,7 @@ async function convertTrack(t, { analyze = false } = {}) {
       job.pct = st.pct || 0;
       if (st.title && !t.title) t.title = st.title;
       if (st.state === 'done') break;
-      if (AN.cancel) throw new Error('cancelled');
+      if (AN.running && AN.cancel) throw new Error('cancelled');
       renderLib();
     }
     adoptMp3(t);
@@ -557,6 +574,7 @@ async function analyzeFile(t) {
   const mono = new Float32Array(b - a);
   for (let i = 0; i < mono.length; i++) mono[i] = c1 ? (c0[a + i] + c1[a + i]) * 0.5 : c0[a + i];
   const r = DSP.analyze([mono], sr, { bpmMin: +S.settings.bpmMin, phase: true });
+  if (r.rms < 0.0005) throw new Error('silent or empty audio');
   t.duration = dur;
   t.peaks = wavePeaks(c0, c1);
   applyResult(t, r);
@@ -1330,7 +1348,9 @@ function bindSetting(id, key, { type = 'value', show, after } = {}) {
   if (type === 'checked') el.checked = !!S.settings[key]; else el.value = S.settings[key];
   sync();
   el.addEventListener(type === 'checked' || el.tagName === 'SELECT' ? 'change' : 'input', () => {
-    S.settings[key] = type === 'checked' ? el.checked : el.type === 'range' || el.type === 'number' ? +el.value : el.value;
+    let v = type === 'checked' ? el.checked : el.type === 'range' || el.type === 'number' ? +el.value : el.value;
+    if (el.type === 'number' && !(v >= +el.min && v <= +el.max)) v = DEFAULTS[key]; // cleared/out-of-range field: keep the last sane value
+    S.settings[key] = v;
     sync(); save(); after?.();
   });
 }
@@ -1514,7 +1534,7 @@ function init() {
       delete S.tracks[t.id];
       S.order = S.order.filter(x => x !== t.id);
       const i = S.set.indexOf(t.id);
-      if (i >= 0) { S.set.splice(i, 1); if (i <= S.pos) S.pos--; }
+      if (i >= 0) { S.set.splice(i, 1); if (i < S.pos || (D.started && i === S.pos)) S.pos--; }
       save(); render(); syncDecks();
     }
   });

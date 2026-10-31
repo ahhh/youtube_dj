@@ -57,8 +57,12 @@ Everything is saved to `localStorage`: library, analysis, set and settings.
 ## Tests
 
 ```sh
-node test/core.test.js                     # DSP + ordering on synthetic audio
-python3 -m http.server 8765 &              # then, with Chrome installed:
-node test/e2e-local.mjs                    # headless: analyze files, build set, crossfade, beat-sync
-# with `npm start` running (PORT=8766): python3 test/e2e-convert.py   # convert a video and analyze it
+node test/core.test.js                     # DSP, ordering, title matching, bad-setting regressions (no deps)
+cd server && npm install && npm test       # extractor, converter and HTTP API (offline, real ffmpeg, fake YouTube)
+python3 test/e2e-convert.py                # browser e2e of the convert flow against an offline fake server
+                                           #   (pip install playwright; python3 -m playwright install chromium)
+python3 -m http.server 8765 &              # headless crossfade / beat-sync check with Chrome installed:
+node test/e2e-local.mjs                    #   CHROME=/path/to/chrome CHROME_ARGS="--no-sandbox" on Linux
 ```
+
+Nothing in the suite touches YouTube; `test/server/fake-server.mjs` serves synthetic click tracks through the real server and converter.
