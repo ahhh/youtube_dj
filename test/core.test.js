@@ -74,6 +74,37 @@ ok(Core.titleKey('Daft Punk - One More Time (Official Video)') === Core.titleKey
   ok(g.reduce((s, x) => s + x.ids.length, 0) === 10, 'groups');
 }
 
+// Regressions: bad settings must not hang or throw (run in a child so a hang fails instead of freezing the suite)
+{
+  const { spawnSync } = require('child_process');
+  const run = code => spawnSync(process.execPath, ['-e', `const {DSP,Core}=require(${JSON.stringify(require.resolve('../core.js'))});${code}`], { timeout: 8000, encoding: 'utf8' });
+  const tone = 'const x=new Float32Array(48000*8);for(let i=0;i<x.length;i++)x[i]=Math.sin(i*0.05)*(i%24000<2000?1:0.05);';
+  for (const [name, opt] of [['bpmMin 0', '{bpmMin:0}'], ['bpmMin NaN', '{bpmMin:NaN}'], ['bpmMin negative', '{bpmMin:-5}'], ['rate 0', '{rate:0}'], ['rate NaN', '{rate:NaN}']]) {
+    const r = run(`${tone}const r=DSP.analyze([x],48000,${opt});console.log(Number.isFinite(r.bpm)&&r.bpm>=30&&r.bpm<=400?'fine':'bad '+r.bpm)`);
+    ok(r.status === 0 && r.stdout.trim() === 'fine', `analyze survives ${name}: ${r.error || r.stderr || r.stdout}`);
+  }
+  const r = run(`const ts=[{id:1,bpm:120,camelot:'8A'},{id:2,bpm:124,camelot:'9A'},{id:3,bpm:100,camelot:'1B'}];console.log(Core.orderTracks(ts,false,{keyWeight:NaN}).length)`);
+  ok(r.status === 0 && r.stdout.trim() === '3', 'orderTracks survives a NaN keyWeight: ' + r.stderr);
+}
+{
+  const silent = DSP.analyze([new Float32Array(48000 * 6)], 48000, {});
+  ok(silent.rms < 0.0005, 'silent audio reports ~zero rms so callers can reject it');
+  ok(DSP.analyze([synth({ bpm: 120, tonic: 0, minor: false, seconds: 8 })], 48000, { bpmMin: 'junk' }).bpm >= 80, 'non-numeric bpmMin falls back to the default');
+}
+
+// titleKey: same song uploaded twice collapses, different versions do not
+{
+  const k = Core.titleKey;
+  ok(k('Song (Official Video)') === k('Song'), 'official video suffix ignored');
+  ok(k('Song [Lyrics]') === k('Song'), 'lyrics tag ignored');
+  ok(k('Song (HD Remastered)') === k('Song'), 'remaster tag ignored');
+  ok(k('Song (Official Remix)') !== k('Song'), 'remix is a different track');
+  ok(k('Song (Clean Bandit Remix)') !== k('Song'), 'named remix is a different track');
+  ok(k('Song (Live)') !== k('Song'), 'live version kept');
+  ok(k('Song (Official Video) [4K]') === k('Song'), 'stacked tags');
+  ok(k('') === '' && k(null) === '', 'empty titles');
+}
+
 // Perf: 400 tracks
 {
   const ts = Array.from({ length: 400 }, (_, i) => ({ id: i, bpm: 85 + Math.random() * 70, camelot: (1 + (i % 12)) + 'AB'[i % 2] }));

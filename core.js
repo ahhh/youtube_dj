@@ -77,7 +77,7 @@ const Core = (() => {
   }
 
   function transCost(a, b, o = {}) {
-    let c = bpmRel(a, b).cost + (o.keyWeight ?? 1) * keyRel(a, b).cost;
+    let c = bpmRel(a, b).cost + (Number.isFinite(o.keyWeight) ? o.keyWeight : 1) * keyRel(a, b).cost;
     if (a.bpm && b.bpm) {
       const pct = (b.bpm / a.bpm - 1) * 100;
       if (o.mode === 'rising' && pct < -1) c += 2 - pct;
@@ -185,7 +185,8 @@ const Core = (() => {
   // Normalised title used to spot the same song uploaded twice.
   function titleKey(title) {
     return String(title || '').toLowerCase()
-      .replace(/[([{][^)\]}]*(official|video|audio|lyric|visuali[sz]er|hd|hq|4k|remaster|explicit|clean)[^)\]}]*[)\]}]/g, '')
+      // Drop upload-noise brackets, but keep ones naming a different version (remix, edit, live...).
+      .replace(/[([{][^)\]}]*[)\]}]/g, m => (/\b(official|video|audio|lyrics?|visuali[sz]er|hd|hq|4k|remaster(ed)?|explicit)\b/.test(m) && !/\b(re-?mix|mix|edit|cover|live|acoustic|instrumental|version|bootleg|flip)\b/.test(m) ? '' : m))
       .replace(/\b(official (music )?video|official audio|lyrics?|hd|hq)\b/g, '')
       .replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
   }
@@ -291,6 +292,7 @@ const DSP = (() => {
   // Comb-filtered autocorrelation over 60–200 BPM (scaled by playback rate) with a
   // gentle prior near 120. Confidence = margin over the best non-octave rival.
   function tempo(acs, fps, rate = 1) {
+    if (!(rate > 0)) rate = 1; // a zero/NaN rate would make the BPM sweep below loop forever
     const len = Math.min(...acs.map(a => a.length));
     const ac = new Float64Array(len);
     for (const a of acs) for (let i = 0; i < len; i++) ac[i] += a[i] / acs.length;
@@ -375,6 +377,8 @@ const DSP = (() => {
   // segs: mono Float32Arrays at sampleRate sr, captured at playback `rate`.
   // Returns BPM folded into [bpmMin, 2*bpmMin), key, and (optionally) beat phase of segs[0].
   function analyze(segs, sr, { rate = 1, bpmMin = 80, phase = false } = {}) {
+    bpmMin = Math.max(30, +bpmMin || 80); // a cleared or zero setting would hang the folding loops below
+    if (!(rate > 0)) rate = 1; // zero/NaN playback rate would size the autocorrelation buffer to Infinity
     const acs = [], c = new Float64Array(12);
     let fps = 0, sq = 0, n = 0, first = null;
     for (const raw of segs) {

@@ -223,10 +223,12 @@ aside{display:flex;flex-direction:column;gap:16px}
           <label>BPM range
             <span class="bpmrange"><input type="number" id="optBpmMin" min="50" max="130" step="1"> – <span id="bpmMax" class="mono"></span></span></label>
           <label class="chk"><input type="checkbox" id="optMute"> Mute speakers while sampling YouTube</label>
+          <label class="chk" id="convRow" hidden title="Needs the local Tube DJ server (npm start in server/)"><input type="checkbox" id="optConvert"> Convert YouTube tracks to mp3 first (exact BPM, key and beat sync)</label>
         </div>
         <div class="row">
           <button id="btnAnalyze" class="primary">Analyze pending</button>
           <button id="btnRetry" class="ghost">Retry failed</button>
+          <button id="btnConvertAll" class="ghost" hidden title="Download every YouTube track as mp3 through the local server">Convert all YouTube → MP3</button>
           <button id="btnCancel" hidden>Stop</button>
         </div>
         <div class="progress"><div id="anBar"></div></div>
@@ -320,7 +322,7 @@ function toast(msg, ms = 3500) {
 const DEFAULTS = {
   sampleSec: 12, segments: 2, speed: 1, bpmMin: 80, mute: true,
   fadeSec: 8, outroSec: 8, introSec: 0, autoMix: true, master: 100, beatSync: true, glideBack: true,
-  mode: 'smooth', keyWeight: 1, dedupe: true,
+  mode: 'smooth', keyWeight: 1, dedupe: true, convert: true,
 };
 const STORE_KEY = 'tubedj.v1';
 const S = { tracks: {}, order: [], set: [], pos: -1, settings: { ...DEFAULTS } };
@@ -328,15 +330,25 @@ try {
   const d = JSON.parse(localStorage.getItem(STORE_KEY));
   if (d) { Object.assign(S, d); S.settings = { ...DEFAULTS, ...d.settings }; }
 } catch {}
-for (const t of Object.values(S.tracks)) if (t.status === 'analyzing') t.status = 'pending';
+// Saved state may be hand-edited or from an older version: normalise before anything reads it.
+if (!S.tracks || typeof S.tracks !== 'object') S.tracks = {};
+S.order = (Array.isArray(S.order) ? S.order : []).filter(id => S.tracks[id]);
+S.set = (Array.isArray(S.set) ? S.set : []).filter(id => S.tracks[id]);
+for (const t of Object.values(S.tracks)) {
+  if (t.status === 'analyzing') t.status = 'pending';
+  if (!Array.isArray(t.sources)) t.sources = [];
+  if (!t.kind) t.kind = 'yt';
+}
 let saveT;
 function save() {
   clearTimeout(saveT);
   saveT = setTimeout(() => {
     try { localStorage.setItem(STORE_KEY, JSON.stringify({ tracks: S.tracks, order: S.order, set: S.set, pos: S.pos, settings: S.settings })); }
-    catch (e) { console.warn('save failed', e); }
+    catch (e) { console.warn('save failed', e); toast('Could not save your library (browser storage is full)', 6000); }
   }, 300);
 }
+const flushSave = () => { if (saveT) { clearTimeout(saveT); saveT = null; try { localStorage.setItem(STORE_KEY, JSON.stringify({ tracks: S.tracks, order: S.order, set: S.set, pos: S.pos, settings: S.settings })); } catch {} } };
+window.addEventListener('pagehide', flushSave);
 const opts = () => ({ mode: S.settings.mode, keyWeight: +S.settings.keyWeight });
 
 // Local files live only in memory for this session; analysis results persist by id.
@@ -445,6 +457,91 @@ async function fetchTitles(ids) {
   save(); render();
 }
 
+// ---------------------------------------------------------------- converter
+// The local Tube DJ server (server/) turns a YouTube id into a cached mp3. A converted
+// track becomes an ordinary local-file track backed by that mp3, so it gets exact
+// BPM/key from a full decode, a waveform and true beat sync like any dropped file.
+const API = { up: false };
+const CONV = new Map(); // id -> { pct } while a conversion is running
+const api = async (path, opts) => {
+  const r = await fetch(path, opts);
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
+  return j;
+};
+
+// Back to a plain YouTube track (keeps its analysis) when the mp3 can't be served.
+function revertConverted(t) {
+  const list = t ? [t] : Object.values(S.tracks).filter(x => x.converted);
+  for (const x of list) { x.kind = 'yt'; x.converted = false; x.status = x.bpm ? 'done' : 'pending'; LOCAL.delete(x.id); }
+  if (!t) { save(); render(); syncDecks(); }
+}
+
+async function probeServer() {
+  if (location.protocol === 'file:') { revertConverted(); return; }
+  try { await api('/api/health'); API.up = true; } catch { revertConverted(); return; }
+  $('#convRow').hidden = false; $('#btnConvertAll').hidden = false;
+  // Converted tracks survive reloads: re-attach the cached mp3, or fall back to YouTube if it was purged.
+  for (const t of Object.values(S.tracks)) {
+    if (!t.converted) continue;
+    let st = null;
+    try { st = await api('/api/status?id=' + encodeURIComponent(t.id)); } catch {}
+    if (st?.state === 'done') LOCAL.set(t.id, { file: null, url: `/api/audio/${t.id}.mp3` });
+    else revertConverted(t);
+  }
+  save(); render(); syncDecks();
+}
+
+function adoptMp3(t) {
+  LOCAL.set(t.id, { file: null, url: `/api/audio/${t.id}.mp3` });
+  t.kind = 'file'; t.converted = true; t.status = 'pending'; t.error = '';
+  for (const d of D.decks) if (d.trackId === t.id && !d.playing) d.load(t.id);
+}
+
+async function convertTrack(t, { analyze = false } = {}) {
+  if (!API.up || t.kind === 'file' || CONV.has(t.id)) return false;
+  const job = { pct: 0 };
+  CONV.set(t.id, job); renderLib();
+  try {
+    await api('/api/convert?id=' + encodeURIComponent(t.id), { method: 'POST' });
+    for (;;) {
+      await sleep(600);
+      const st = await api('/api/status?id=' + encodeURIComponent(t.id));
+      if (st.state === 'error') throw new Error(st.error);
+      if (st.state === 'idle') throw new Error('server lost the job');
+      job.pct = st.pct || 0;
+      if (st.title && !t.title) t.title = st.title;
+      if (st.state === 'done') break;
+      if (AN.running && AN.cancel) throw new Error('cancelled');
+      renderLib();
+    }
+    adoptMp3(t);
+    log(`✓ ${t.title || t.id}: converted to mp3`, 'okl');
+    return true;
+  } catch (e) {
+    if (e.message !== 'cancelled') log(`✗ ${t.title || t.id}: convert failed (${e.message})`, 'err');
+    return false;
+  } finally {
+    CONV.delete(t.id); save(); render(); syncDecks();
+    if (analyze && t.converted && !AN.running) runAnalysis({ filesOnly: true });
+  }
+}
+
+// Convert a batch with a small worker pool; returns how many succeeded.
+async function convertMany(tracks, { limit = 2 } = {}) {
+  let i = 0, ok = 0;
+  const worker = async () => {
+    while (i < tracks.length && !AN.cancel) {
+      const t = tracks[i++], n = i;
+      $('#anStatus').textContent = `Converting ${n}/${tracks.length}: ${t.title || t.id}`;
+      $('#anBar').style.width = ((n - 1) / tracks.length * 100) + '%';
+      if (await convertTrack(t)) ok++;
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, tracks.length) }, worker));
+  return ok;
+}
+
 // ---------------------------------------------------------------- local files
 const AUDIO_EXT = /\.(mp3|m4a|aac|wav|flac|ogg|oga|opus|webm|aiff?)$/i;
 function addFiles(files) {
@@ -467,9 +564,9 @@ function addFiles(files) {
 }
 
 async function analyzeFile(t) {
-  const { file } = LOCAL.get(t.id);
+  const { file, url } = LOCAL.get(t.id);
   const ctx = new OfflineAudioContext(1, 1, 22050); // decodeAudioData resamples to 22.05 kHz
-  const ab = await ctx.decodeAudioData(await file.arrayBuffer());
+  const ab = await ctx.decodeAudioData(file ? await file.arrayBuffer() : await (await fetch(url)).arrayBuffer());
   const sr = ab.sampleRate, dur = ab.duration;
   const c0 = ab.getChannelData(0), c1 = ab.numberOfChannels > 1 ? ab.getChannelData(1) : null;
   let a = Math.floor(dur * 0.1 * sr), b = Math.min(Math.floor(dur * 0.9 * sr), a + 240 * sr);
@@ -477,6 +574,7 @@ async function analyzeFile(t) {
   const mono = new Float32Array(b - a);
   for (let i = 0; i < mono.length; i++) mono[i] = c1 ? (c0[a + i] + c1[a + i]) * 0.5 : c0[a + i];
   const r = DSP.analyze([mono], sr, { bpmMin: +S.settings.bpmMin, phase: true });
+  if (r.rms < 0.0005) throw new Error('silent or empty audio');
   t.duration = dur;
   t.peaks = wavePeaks(c0, c1);
   applyResult(t, r);
@@ -643,6 +741,16 @@ async function analyzeYouTube(t) {
 
 async function runAnalysis({ filesOnly = false } = {}) {
   if (AN.running) return;
+  if (!filesOnly && API.up && S.settings.convert) {
+    const todo = S.order.map(id => S.tracks[id]).filter(t => t.kind !== 'file' && t.status === 'pending');
+    if (todo.length) {
+      AN.running = true; AN.cancel = false;
+      $('#btnCancel').hidden = false; $('#btnAnalyze').disabled = true;
+      await convertMany(todo);
+      AN.running = false; $('#btnCancel').hidden = true; $('#btnAnalyze').disabled = false;
+      if (AN.cancel) { $('#anStatus').textContent = ''; $('#anBar').style.width = '0'; return; }
+    }
+  }
   const pend = S.order.map(id => S.tracks[id]).filter(t => t.status === 'pending');
   const files = pend.filter(t => t.kind === 'file' && LOCAL.has(t.id));
   let yts = filesOnly ? [] : pend.filter(t => t.kind !== 'file');
@@ -1058,7 +1166,7 @@ function camBadge(t, act = '') {
   const n = parseInt(t.camelot, 10), l = t.camelot.endsWith('B');
   return `<span class="cam" style="--h:${(n - 1) * 30};--l:${l ? 70 : 58}%" title="${esc(t.keyName)}${t.keyConf != null && t.keyConf < 0.2 ? ' (low confidence)' : ''}" ${act}>${t.camelot}</span>`;
 }
-const kindBadge = t => (t.kind === 'file' ? '<span class="kind file">FILE</span>' : '<span class="kind">YT</span>');
+const kindBadge = t => (t.converted ? '<span class="kind file" title="YouTube track converted to mp3">YT→MP3</span>' : t.kind === 'file' ? '<span class="kind file">FILE</span>' : '<span class="kind">YT</span>');
 function transHTML(a, b) {
   const br = Core.bpmRel(a, b), kr = Core.keyRel(a, b), q = Core.quality(Core.transCost(a, b, opts()));
   return { q, br, kr, html: `<span class="tx ${q}" title="${esc(br.label + ' · ' + kr.label)}">${esc(br.label)}</span>` };
@@ -1153,7 +1261,7 @@ function renderLib() {
   el.innerHTML = rows.slice(0, 1000).map(t => {
     const missing = t.kind === 'file' && !LOCAL.has(t.id);
     const st = missing ? 'missing' : t.status;
-    const label = missing ? 're-add file' : st === 'error' ? 'failed' : st;
+    const label = CONV.has(t.id) ? 'converting ' + (CONV.get(t.id).pct || 0) + '%' : missing ? 're-add file' : st === 'error' ? 'failed' : st;
     const inSet = S.set.indexOf(t.id);
     return `<div class="trow" data-id="${esc(t.id)}">
       <span class="num">${inSet >= 0 ? '#' + (inSet + 1) : ''}</span><span class="kindc">${kindBadge(t)}</span>
@@ -1161,7 +1269,7 @@ function renderLib() {
       <span class="tbpm" data-act="bpm">${t.bpm ? t.bpm.toFixed(1) : '—'}</span>
       ${camBadge(t, 'data-act="key"')}
       <span class="status ${st}" title="${esc(t.error || '')}">${esc(label)}</span>
-      <span class="acts">${ready(t) ? `<button data-act="next" title="Play next">⤒</button><button data-act="add" title="Append to set">+</button>` : ''}<button data-act="re" title="Re-analyze">↻</button><button data-act="del" title="Remove from library">✕</button></span>
+      <span class="acts">${ready(t) ? `<button data-act="next" title="Play next">⤒</button><button data-act="add" title="Append to set">+</button>` : ''}${API.up && t.kind !== 'file' && !CONV.has(t.id) ? '<button data-act="conv" title="Convert to mp3 for exact BPM, key and beat sync">⇩</button>' : ''}<button data-act="re" title="Re-analyze">↻</button><button data-act="del" title="Remove from library">✕</button></span>
     </div>`;
   }).join('');
 }
@@ -1240,7 +1348,9 @@ function bindSetting(id, key, { type = 'value', show, after } = {}) {
   if (type === 'checked') el.checked = !!S.settings[key]; else el.value = S.settings[key];
   sync();
   el.addEventListener(type === 'checked' || el.tagName === 'SELECT' ? 'change' : 'input', () => {
-    S.settings[key] = type === 'checked' ? el.checked : el.type === 'range' || el.type === 'number' ? +el.value : el.value;
+    let v = type === 'checked' ? el.checked : el.type === 'range' || el.type === 'number' ? +el.value : el.value;
+    if (el.type === 'number' && !(v >= +el.min && v <= +el.max)) v = DEFAULTS[key]; // cleared/out-of-range field: keep the last sane value
+    S.settings[key] = v;
     sync(); save(); after?.();
   });
 }
@@ -1265,12 +1375,24 @@ function init() {
   bindSetting('optMode', 'mode', { after: render });
   bindSetting('optKeyW', 'keyWeight', { after: render });
   bindSetting('optDedupe', 'dedupe', { type: 'checked' });
+  bindSetting('optConvert', 'convert', { type: 'checked' });
 
   $('#btnToggleSetup').onclick = () => { $('#setup').hidden = !$('#setup').hidden; };
   $('#btnLoad').onclick = addFromInput;
   $('#btnFiles').onclick = () => $('#fileInput').click();
   $('#fileInput').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
   $('#btnAnalyze').onclick = () => runAnalysis();
+  $('#btnConvertAll').onclick = async () => {
+    const todo = S.order.map(id => S.tracks[id]).filter(t => t.kind !== 'file' && t.status !== 'error');
+    if (!todo.length) return toast('No YouTube tracks to convert');
+    if (AN.running) return toast('Analysis is running');
+    AN.running = true; AN.cancel = false;
+    $('#btnCancel').hidden = false; $('#btnAnalyze').disabled = true;
+    const ok = await convertMany(todo);
+    AN.running = false; $('#btnCancel').hidden = true; $('#btnAnalyze').disabled = false;
+    toast(`${ok}/${todo.length} converted`);
+    if (ok) runAnalysis({ filesOnly: true });
+  };
   $('#btnRetry').onclick = () => {
     let n = 0;
     for (const t of Object.values(S.tracks)) if (t.status === 'error') { t.status = 'pending'; n++; }
@@ -1405,13 +1527,14 @@ function init() {
     else if (act === 'key') editKey(t);
     else if (act === 'next') insertNext(t.id);
     else if (act === 'add') appendOrdered([t.id]);
+    else if (act === 'conv') convertTrack(t, { analyze: true });
     else if (act === 're') { t.status = 'pending'; save(); render(); toast('Marked for re-analysis. Press “Analyze pending”.'); }
     else if (act === 'del') {
       if (D.decks.some(d => d.trackId === t.id) && D.started) return toast('That track is on a deck');
       delete S.tracks[t.id];
       S.order = S.order.filter(x => x !== t.id);
       const i = S.set.indexOf(t.id);
-      if (i >= 0) { S.set.splice(i, 1); if (i <= S.pos) S.pos--; }
+      if (i >= 0) { S.set.splice(i, 1); if (i < S.pos || (D.started && i === S.pos)) S.pos--; }
       save(); render(); syncDecks();
     }
   });
@@ -1463,6 +1586,7 @@ function init() {
   s.onerror = () => toast("Couldn't load the YouTube player API. Are you offline?", 8000);
   document.head.appendChild(s);
   setInterval(tick, 250);
+  probeServer();
 }
 init();
 </script>
