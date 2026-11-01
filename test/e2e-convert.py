@@ -104,7 +104,7 @@ try:
 
         # 7. bulk convert
         ev(f"addTrack('{SIL}','t',{{title:'Silence'}}); save(); render();")
-        ev("$('#setup').hidden = false")
+        ev("setPrep(true)")
         pg.click('#btnConvertAll')
         t = wait_status(SIL, ['done', 'error', 'pending'], 40)
         pg.wait_for_function('!AN.running', timeout=40000); pg.wait_for_timeout(1500)

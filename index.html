@@ -35,6 +35,48 @@ header.top{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bot
 .banner{background:#3a1420;border-bottom:1px solid var(--accent);padding:10px 20px}
 
 main{padding:16px 20px 40px;display:flex;flex-direction:column;gap:16px;max-width:1600px;margin:0 auto}
+body{padding-bottom:64px}
+
+/* areas: prep (top), dj (middle), console (bottom drawer) */
+.area{border:1px solid var(--line);border-radius:16px;background:var(--panel)}
+.area-bar{display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:46px}
+.area-name{font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+.area-toggle{display:flex;align-items:center;gap:12px;flex:1;min-width:0;background:none;border:0;padding:0;text-align:left;border-radius:0}
+.area-toggle:hover:not(:disabled){background:none}
+.chev{display:inline-block;transition:transform .2s;color:var(--dim)}
+.crumbs{display:flex;gap:14px;flex-wrap:wrap;color:var(--dim);font-size:13px}
+.crumbs .step{margin-right:5px}
+.crumbs>span{white-space:nowrap}
+.area-body{display:grid;grid-template-rows:1fr;transition:grid-template-rows .25s ease}
+.area-inner{overflow:hidden;min-height:0}
+.prep .area-inner>.setup-grid{padding:4px 14px 14px;border-top:1px solid var(--line);padding-top:14px}
+.prep:not(.open) .area-body{grid-template-rows:0fr}
+.prep:not(.open) .chev{transform:rotate(-90deg)}
+.prep.open #prepSummary{display:none}
+.dj{background:#0e1016;border-color:#2c3140;padding:0 14px 14px}
+.dj .area-bar{padding:10px 0}
+.dj .area-name{color:var(--accent2)}
+
+.console{position:fixed;left:0;right:0;bottom:0;z-index:30;background:rgba(14,16,22,.97);backdrop-filter:blur(8px);border-top:1px solid #2c3140}
+.console-bar{display:flex;align-items:center;gap:12px;padding:8px 20px;max-width:1600px;margin:0 auto}
+.console-bar .area-name{color:var(--accent)}
+.chips{display:flex;gap:6px;flex:1;min-width:0;overflow:hidden;flex-wrap:nowrap;mask-image:linear-gradient(90deg,#000 85%,transparent)}
+.chip{font-family:var(--mono);font-size:11px;padding:3px 8px;border-radius:999px;background:var(--panel2);border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.chip b{color:var(--text);font-weight:600}
+.console-drawer{display:grid;grid-template-rows:0fr;transition:grid-template-rows .25s ease}
+.console.open .console-drawer{grid-template-rows:1fr}
+.console.open .chev{transform:rotate(180deg)}
+.console-drawer>div{overflow:hidden;min-height:0}
+.knobs{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;padding:14px 20px 6px;max-width:1600px;margin:0 auto;max-height:55vh;overflow:auto}
+.knob-grp{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px}
+.knob-grp h4{margin:0 0 4px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);font-weight:600}
+.knob-grp p{margin:0 0 10px;font-size:12px;color:var(--dim)}
+.knob-grp label{display:grid;grid-template-columns:118px minmax(0,1fr) 58px;align-items:center;gap:8px;font-size:12px;color:var(--dim);margin-top:6px}
+.knob-grp label select{grid-column:2/-1}
+.knob-grp label b{font-family:var(--mono);font-weight:400;color:var(--text);text-align:right}
+.knob-grp label.chk{display:flex;color:var(--text)}
+.knob-grp .row{margin-top:10px}
+.knob-grp button{font-size:12px;padding:4px 10px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:14px}
 h3{margin:0 0 10px;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:500}
 .step{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;margin-right:6px}
@@ -103,7 +145,7 @@ textarea#urls{width:100%;min-height:96px;resize:vertical;font-family:var(--mono)
 .b-play:hover:not(:disabled){background:#27a85d!important}
 .deck:not(.now) .b-play,.deck:not(.now) .b-tap,.deck:not(.now) .tapv,.deck:not(.now) .b-tapok,.deck.now .b-skip{display:none}
 
-.mixer{grid-area:mixer;display:flex;flex-direction:column;gap:10px}
+.mixer{grid-area:mixer;display:flex;flex-direction:column;gap:10px;background:var(--panel)}
 .trans{background:#0e1016;border-radius:10px;padding:10px;font-size:13px;min-height:74px}
 .trans .q{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px}
 .big{padding:12px;font-size:16px;font-weight:700;letter-spacing:.06em}
@@ -169,7 +211,7 @@ aside{display:flex;flex-direction:column;gap:16px}
 .sug .meta2{display:flex;gap:6px;align-items:center;font-size:12px;margin-top:2px}
 .sug .acts{display:flex;gap:4px}.sug .acts button{padding:2px 8px;font-size:12px}
 
-#toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(20px);background:#222633;border:1px solid #3a4052;padding:10px 16px;border-radius:10px;opacity:0;transition:.25s;pointer-events:none;z-index:50;max-width:90vw}
+#toast{position:fixed;bottom:72px;left:50%;transform:translateX(-50%) translateY(20px);background:#222633;border:1px solid #3a4052;padding:10px 16px;border-radius:10px;opacity:0;transition:.25s;pointer-events:none;z-index:50;max-width:90vw}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
 @media (max-width:1200px){.setup-grid{grid-template-columns:1fr 1fr}.an-col{grid-column:1/-1}}
@@ -179,6 +221,11 @@ aside{display:flex;flex-direction:column;gap:16px}
 }
 @media (max-width:700px){
   main{padding:12px 16px}
+  .console-bar{padding:8px 16px}
+  #prepSummary{display:none}
+  .crumbs{gap:8px;font-size:12px}
+  .knobs{padding:12px 16px 6px}
+  .knob-grp label{grid-template-columns:100px minmax(0,1fr) 50px}
   .setup-grid{grid-template-columns:1fr}
   .trow{grid-template-columns:24px minmax(0,1fr) 54px 42px;grid-auto-rows:auto}
   .trow .kindc,.trow .tx{display:none}
@@ -189,16 +236,23 @@ aside{display:flex;flex-direction:column;gap:16px}
 </head>
 <body>
 <div id="fileBanner" class="banner" hidden>
-  This page is opened from <b>file://</b>. YouTube embeds and tab-audio capture need a web origin. Run <code class="mono">python3 -m http.server 8000</code> in this folder and open <b>http://localhost:8000</b>.
+  This page is opened from <b>file://</b>. YouTube embeds and tab-audio capture need a web origin. Run <code class="mono">npm start</code> in the <code class="mono">server/</code> folder and open <b>http://127.0.0.1:8000</b>.
 </div>
 <header class="top">
   <div class="brand">TUBE<span>DJ</span></div>
   <div id="stats"></div>
-  <button id="btnToggleSetup" class="ghost">Load &amp; analyze ▾</button>
 </header>
 
 <main>
-  <section id="setup" class="panel">
+  <section id="setup" class="area prep open">
+    <div class="area-bar">
+      <button id="btnTogglePrep" class="area-toggle" aria-expanded="true" aria-controls="prepBody">
+        <span class="chev">▾</span><span class="area-name">Prep</span>
+        <span class="crumbs"><span><span class="step">1</span>Add music</span><span><span class="step">2</span>Analyze</span><span><span class="step">3</span>Preview</span></span>
+      </button>
+      <span id="prepSummary" class="dim">Collapsed. Click to add more music or analyze.</span>
+    </div>
+    <div class="area-body" id="prepBody"><div class="area-inner">
     <div class="setup-grid">
       <div>
         <h3><span class="step">1</span>Add music</h3>
@@ -236,26 +290,25 @@ aside{display:flex;flex-direction:column;gap:16px}
         <p class="hint">For YouTube tracks, Chrome or Edge will ask to share <b>this tab</b>. Keep <b>“Also share tab audio”</b> checked. Each video plays briefly in the small player and gets sampled; nothing leaves your browser. Results are cached, so a track is only analyzed once.</p>
       </div>
       <div class="an-col">
+        <h3><span class="step">3</span>Preview &amp; log</h3>
         <div class="video"><div id="anPlayer"></div></div>
         <div id="anLog" class="log"></div>
       </div>
     </div>
+    </div></div>
   </section>
 
-  <section class="decks" id="decks">
+  <section class="area dj" id="djArea">
+    <div class="area-bar"><span class="area-name">Decks</span><span class="dim">A · crossfader · B</span></div>
+    <div class="decks" id="decks">
     <div class="mixer panel" id="mixer">
       <div class="trans" id="transInfo"></div>
       <button id="btnStart" class="primary big">▶ Start set</button>
       <button id="btnMix" class="mix big" title="Shortcut: M">MIX ▸</button>
       <div class="fader"><span id="fadeL">A</span><input type="range" id="fader" min="0" max="1" step="0.005" value="0" aria-label="Crossfader"><span id="fadeR">B</span></div>
-      <label class="chk"><input type="checkbox" id="optAuto"> Auto-mix at end of track</label>
-      <label>Fade <input type="range" id="optFade" min="0" max="30" step="1"><b id="vFade"></b></label>
-      <label title="Auto-mix starts this long before the track ends (skips long outros)">Mix-out lead <input type="range" id="optOutro" min="0" max="90" step="1"><b id="vOutro"></b></label>
-      <label title="Skip this many seconds of intro when a track is cued">Start at <input type="range" id="optIntro" min="0" max="90" step="1"><b id="vIntro"></b></label>
       <label>Master <input type="range" id="optMaster" min="0" max="100" step="1"><b id="vMaster"></b></label>
-      <hr>
-      <label class="chk" title="Local files only: match tempo and line up beats when mixing"><input type="checkbox" id="optSync"> Beat-sync local files</label>
-      <label class="chk"><input type="checkbox" id="optGlide"> Glide tempo back after mix</label>
+      <label class="chk"><input type="checkbox" id="optAuto"> Auto-mix at end of track</label>
+    </div>
     </div>
   </section>
 
@@ -264,9 +317,6 @@ aside{display:flex;flex-direction:column;gap:16px}
       <div class="tabs"><button data-tab="set" class="on">Set list</button><button data-tab="lib">Library</button></div>
       <div id="tabSet">
         <div class="toolbar">
-          <label>Flow <select id="optMode"><option value="smooth">Smooth</option><option value="rising">Build up (rising BPM)</option><option value="falling">Wind down (falling BPM)</option></select></label>
-          <label title="How much key compatibility matters relative to BPM">Harmonic weight <input type="range" id="optKeyW" min="0" max="2" step="0.1"></label>
-          <label><input type="checkbox" id="optDedupe"> Skip duplicate songs</label>
           <span class="sp"></span>
           <button id="btnOrder">Auto-order upcoming</button>
           <button id="btnBuild">Rebuild from library</button>
@@ -289,6 +339,45 @@ aside{display:flex;flex-direction:column;gap:16px}
     </aside>
   </section>
 </main>
+
+<section class="console" id="console">
+  <div class="console-drawer"><div>
+    <div class="knobs">
+      <div class="knob-grp">
+        <h4>Flow &amp; ordering</h4>
+        <p>How the set is ordered. Next picks re-score live; <b>Re-order upcoming</b> applies it to the set.</p>
+        <label>Flow <select id="optMode"><option value="smooth">Smooth</option><option value="rising">Build up (rising BPM)</option><option value="falling">Wind down (falling BPM)</option></select></label>
+        <label title="How much key compatibility counts">Harmonic weight <input type="range" id="optKeyW" min="0" max="3" step="0.1"><b id="vKeyW"></b></label>
+        <label title="How much tempo distance counts">BPM weight <input type="range" id="optBpmW" min="0" max="3" step="0.1"><b id="vBpmW"></b></label>
+        <label title="Jumps larger than this are heavily penalised">Max BPM jump <input type="range" id="optMaxJump" min="0" max="20" step="1"><b id="vMaxJump"></b></label>
+        <label class="chk" title="Treat 70 → 140 BPM as a near match"><input type="checkbox" id="optHalf"> Allow half/double-time matches</label>
+        <label class="chk"><input type="checkbox" id="optDedupe"> Skip duplicate songs</label>
+        <div class="row"><button id="btnOrderC">Re-order upcoming</button></div>
+      </div>
+      <div class="knob-grp">
+        <h4>Transitions</h4>
+        <p>Applies to every mix, YouTube and local.</p>
+        <label>Fade length <input type="range" id="optFade" min="0" max="30" step="1"><b id="vFade"></b></label>
+        <label title="Volume curve used by the crossfader and every mix">Fade curve <select id="optCurve"><option value="power">Equal power</option><option value="linear">Linear</option><option value="scurve">S-curve (slow ends)</option><option value="overlap">Full overlap</option></select></label>
+        <label title="Auto-mix starts this long before the track ends (skips long outros)">Mix-out lead <input type="range" id="optOutro" min="0" max="90" step="1"><b id="vOutro"></b></label>
+        <label title="Skip this many seconds of intro when a track is cued">Start at <input type="range" id="optIntro" min="0" max="90" step="1"><b id="vIntro"></b></label>
+      </div>
+      <div class="knob-grp">
+        <h4>Tempo &amp; key match</h4>
+        <p>Local files and converted mp3s only. YouTube's player can't be stretched.</p>
+        <label title="How the incoming track is matched to the outgoing one">BPM match <select id="optTempoMatch"><option value="beat">Beat-sync (tempo + phase)</option><option value="tempo">Tempo only</option><option value="off">Off</option></select></label>
+        <label title="Tracks further apart than this are not stretched">Max stretch <input type="range" id="optStretch" min="2" max="16" step="1"><b id="vStretch"></b></label>
+        <label class="chk" title="On: stretching keeps the key. Off: pitch moves with tempo, like vinyl"><input type="checkbox" id="optKeyLock"> Key lock (stretch without changing pitch)</label>
+        <label class="chk"><input type="checkbox" id="optGlide"> Glide tempo back after mix</label>
+        <label>Glide time <input type="range" id="optGlideSec" min="2" max="60" step="1"><b id="vGlideSec"></b></label>
+      </div>
+    </div>
+  </div></div>
+  <div class="console-bar">
+    <button id="btnConsole" class="area-toggle" style="flex:0 0 auto" aria-expanded="false" aria-controls="console"><span class="chev">▴</span><span class="area-name">Controls</span></button>
+    <div class="chips" id="consoleChips"></div>
+  </div>
+</section>
 <div id="toast"></div>
 
 <script src="core.js"></script>
@@ -300,12 +389,12 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': 
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const frac = v => v - Math.floor(v);
 const fmtTime = s => { if (!isFinite(s) || s < 0) s = 0; s = Math.floor(s); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
-async function waitUntil(fn, timeout = 10000, every = 150) {
+async function waitUntil(fn, timeout = 10000, every = 150, msg = 'timeout') {
   const t0 = Date.now();
   for (;;) {
     const v = fn();
     if (v) return v;
-    if (Date.now() - t0 > timeout) throw new Error('timeout');
+    if (Date.now() - t0 > timeout) throw new Error(msg);
     await sleep(every);
   }
 }
@@ -321,14 +410,19 @@ function toast(msg, ms = 3500) {
 // ---------------------------------------------------------------- state
 const DEFAULTS = {
   sampleSec: 12, segments: 2, speed: 1, bpmMin: 80, mute: true,
-  fadeSec: 8, outroSec: 8, introSec: 0, autoMix: true, master: 100, beatSync: true, glideBack: true,
-  mode: 'smooth', keyWeight: 1, dedupe: true, convert: true,
+  fadeSec: 8, fadeCurve: 'power', outroSec: 8, introSec: 0, autoMix: true, master: 100,
+  tempoMatch: 'beat', maxStretch: 8, keyLock: true, glideBack: true, glideSec: 12,
+  mode: 'smooth', keyWeight: 1, bpmWeight: 1, maxJump: 0, halfDouble: true, dedupe: true, convert: true, consoleOpen: false,
 };
 const STORE_KEY = 'tubedj.v1';
 const S = { tracks: {}, order: [], set: [], pos: -1, settings: { ...DEFAULTS } };
 try {
   const d = JSON.parse(localStorage.getItem(STORE_KEY));
-  if (d) { Object.assign(S, d); S.settings = { ...DEFAULTS, ...d.settings }; }
+  if (d) {
+    Object.assign(S, d); S.settings = { ...DEFAULTS, ...d.settings };
+    if (d.settings?.beatSync === false && !d.settings.tempoMatch) S.settings.tempoMatch = 'off'; // pre-console setting
+    delete S.settings.beatSync;
+  }
 } catch {}
 // Saved state may be hand-edited or from an older version: normalise before anything reads it.
 if (!S.tracks || typeof S.tracks !== 'object') S.tracks = {};
@@ -349,7 +443,7 @@ function save() {
 }
 const flushSave = () => { if (saveT) { clearTimeout(saveT); saveT = null; try { localStorage.setItem(STORE_KEY, JSON.stringify({ tracks: S.tracks, order: S.order, set: S.set, pos: S.pos, settings: S.settings })); } catch {} } };
 window.addEventListener('pagehide', flushSave);
-const opts = () => ({ mode: S.settings.mode, keyWeight: +S.settings.keyWeight });
+const opts = () => ({ mode: S.settings.mode, keyWeight: +S.settings.keyWeight, bpmWeight: +S.settings.bpmWeight, maxJump: +S.settings.maxJump, halfDouble: !!S.settings.halfDouble });
 
 // Local files live only in memory for this session; analysis results persist by id.
 const LOCAL = new Map();
@@ -395,20 +489,27 @@ function parseInput(text) {
   return out;
 }
 
+// The iframe API can take well over 15s to come up on a slow connection, so wait generously for the player.
 async function expandPlaylist(list) {
-  await waitUntil(() => AN.ready, 15000);
-  AN.err = null;
-  const before = JSON.stringify(AN.player.getPlaylist?.() || null);
-  const t0 = Date.now();
-  AN.player.cuePlaylist({ listType: 'playlist', list, index: 0 });
-  return waitUntil(() => {
-    if (AN.err != null) throw new Error(ytErr(AN.err));
-    const p = AN.player.getPlaylist?.();
-    if (!p || !p.length) return null;
-    if (AN.cuedAt > t0) return p;
-    if (Date.now() - t0 > 4000 && JSON.stringify(p) !== before) return p;
-    return null;
-  }, 15000);
+  await waitUntil(() => AN.ready, 60000, 150, "the YouTube player didn't load (slow connection, or blocked by an extension?)");
+  for (let attempt = 1; ; attempt++) {
+    AN.err = null;
+    const before = JSON.stringify(AN.player.getPlaylist?.() || null);
+    const t0 = Date.now();
+    AN.player.cuePlaylist({ listType: 'playlist', list, index: 0 });
+    try {
+      return await waitUntil(() => {
+        if (AN.err != null) throw new Error(ytErr(AN.err));
+        const p = AN.player.getPlaylist?.();
+        if (!p || !p.length) return null;
+        if (AN.cuedAt > t0) return p;
+        if (Date.now() - t0 > 4000 && JSON.stringify(p) !== before) return p;
+        return null;
+      }, 15000, 150, "YouTube didn't return the playlist. Is it public or unlisted?");
+    } catch (e) {
+      if (attempt >= 2 || AN.err != null) throw e;
+    }
+  }
 }
 
 async function addFromInput() {
@@ -416,24 +517,25 @@ async function addFromInput() {
   const items = parseInput($('#urls').value);
   if (!items.length) return toast('No YouTube links or IDs found');
   const st = $('#loadStatus');
-  let added = 0;
+  let added = 0, failed = 0;
   const before = new Set(S.order);
   for (const it of items) {
     if (it.type === 'video') { addTrack(it.id, 'videos'); continue; }
-    st.textContent = 'Loading playlist ' + it.id.slice(0, 12) + '…';
+    st.textContent = (AN.ready ? 'Loading playlist ' : 'Waiting for the YouTube player to load playlist ') + it.id.slice(0, 12) + '…';
     try {
       const ids = await expandPlaylist(it.id);
       for (const id of ids) addTrack(id, it.id);
       log(`Playlist ${it.id}: ${ids.length} videos`, 'okl');
     } catch (e) {
+      failed++;
       log(`Playlist ${it.id} failed: ${e.message}`, 'err');
-      toast(`Couldn't load playlist ${it.id}. Is it public or unlisted?`);
+      toast(`Couldn't load playlist ${it.id}: ${e.message}`, 6000);
     }
   }
   try { AN.player.stopVideo(); } catch {}
   const fresh = S.order.filter(id => !before.has(id));
   added = fresh.length;
-  st.textContent = `${added} new track${added === 1 ? '' : 's'} added${items.length > added ? ' (duplicates merged)' : ''}`;
+  st.textContent = `${added} new track${added === 1 ? '' : 's'} added${failed ? ` (${failed} playlist${failed === 1 ? '' : 's'} failed)` : items.length > added ? ' (duplicates merged)' : ''}`;
   $('#urls').value = '';
   save(); render();
   fetchTitles(fresh);
@@ -781,7 +883,7 @@ async function runAnalysis({ filesOnly = false } = {}) {
     n++; save(); render();
   }
   if (yts.length && !AN.cancel) {
-    $('#setup').hidden = false;
+    setPrep(true);
     try { await startCapture(); }
     catch (e) {
       log(e.message, 'err');
@@ -882,7 +984,7 @@ class Deck {
     this.el = document.getElementById('deck' + i);
     this.audio = new Audio();
     this.audio.preload = 'auto';
-    this.audio.preservesPitch = true;
+    this.audio.preservesPitch = S.settings.keyLock !== false;
     for (const ev of ['playing', 'pause', 'ended', 'waiting']) this.audio.addEventListener(ev, () => onDeckEvent(this, ev));
     this.audio.addEventListener('error', () => { if (this.kind === 'file' && this.audio.getAttribute('src')) onDeckEvent(this, 'error', 'could not play file'); });
   }
@@ -978,11 +1080,18 @@ function deckHTML(i) {
 }
 
 
+// Gain of the deck the fader is moving towards, for x in 0..1; the other deck gets curve(1 - x).
+const CURVES = {
+  power: x => Math.sin(x * Math.PI / 2),
+  linear: x => x,
+  scurve: x => Math.sin(x * x * (3 - 2 * x) * Math.PI / 2),
+  overlap: x => Math.min(1, 2 * x),
+};
 function applyVolumes() {
   if (D.decks.length < 2) return;
-  const m = +S.settings.master;
-  D.decks[0].setVolume(Math.round(Math.cos(D.x * Math.PI / 2) * m));
-  D.decks[1].setVolume(Math.round(Math.sin(D.x * Math.PI / 2) * m));
+  const m = +S.settings.master, curve = CURVES[S.settings.fadeCurve] || CURVES.power;
+  D.decks[0].setVolume(Math.round(curve(1 - D.x) * m));
+  D.decks[1].setVolume(Math.round(curve(D.x) * m));
 }
 const liveEnd = () => (D.live ? 1 : 0);
 
@@ -1006,6 +1115,7 @@ function startSet() {
   if (S.pos < 0) S.pos = nextPlayable(0);
   if (S.pos < 0) return toast('None of the set’s tracks are playable. Re-add your local files.');
   syncDecks();
+  setPrep(false);
   D.started = true;
   D.x = liveEnd();
   applyVolumes();
@@ -1024,7 +1134,7 @@ function completeTransition() {
     S.set.splice(S.pos + 1, 0, nd.trackId);
   }
   S.pos = S.pos + 1;
-  if (S.settings.glideBack && nd.rate() !== 1) nd.glideTo(1, 12000);
+  if (S.settings.glideBack && nd.rate() !== 1) nd.glideTo(1, +S.settings.glideSec * 1000);
   save(); render();
   setTimeout(syncDecks, 600);
 }
@@ -1041,18 +1151,23 @@ function cutToNext() {
 }
 
 // Local→local: match tempo, start the incoming track on a beat, then phase-lock it during the fade.
+// With tempoMatch 'tempo' only the rate is matched and the track starts straight away.
 // Returns a lock with step() (called every fade tick) or null when sync doesn't apply.
 async function beatSyncStart(out, inc) {
-  const a = out.track, b = inc.track;
-  if (!(S.settings.beatSync && out.kind === 'file' && inc.kind === 'file' && out.playing && a?.bpm && b?.bpm && a.beatOffset != null && b.beatOffset != null)) return null;
+  const a = out.track, b = inc.track, mode = S.settings.tempoMatch;
+  if (!((mode === 'beat' || mode === 'tempo') && out.kind === 'file' && inc.kind === 'file' && out.playing && a?.bpm && b?.bpm && a.beatOffset != null && b.beatOffset != null)) return null;
   let fold = 1;
   for (const k of [2, 0.5]) if (Math.abs(Math.log(a.bpm * out.rate() / b.bpm * k)) < Math.abs(Math.log(a.bpm * out.rate() / b.bpm))) fold = k;
   // The outgoing deck may still be gliding back from the previous mix, so follow its live rate.
   const target = () => a.bpm * out.rate() / b.bpm * fold;
   const ratio = target();
-  if (Math.abs(ratio - 1) > 0.08) return null;
+  if (Math.abs(ratio - 1) > +S.settings.maxStretch / 100) return null;
   try { await waitUntil(() => inc.audio.readyState >= 3, 4000, 50); } catch { return null; }
   inc.audio.playbackRate = ratio;
+  if (mode === 'tempo') {
+    inc.play();
+    return { ratio, step() { if (Math.abs(inc.audio.playbackRate - target()) > 0.0008) inc.audio.playbackRate = target(); }, done() { inc.audio.playbackRate = target(); } };
+  }
   const PA = 60 / a.bpm, PB = 60 / b.bpm;
   const phaseErr = () => frac((inc.time() - b.beatOffset) / PB - (out.time() - a.beatOffset) / PA + 0.5) - 0.5; // beats, + = incoming ahead
   let wait = frac(-phaseErr()) * PA / out.rate();
@@ -1168,7 +1283,7 @@ function camBadge(t, act = '') {
 }
 const kindBadge = t => (t.converted ? '<span class="kind file" title="YouTube track converted to mp3">YT→MP3</span>' : t.kind === 'file' ? '<span class="kind file">FILE</span>' : '<span class="kind">YT</span>');
 function transHTML(a, b) {
-  const br = Core.bpmRel(a, b), kr = Core.keyRel(a, b), q = Core.quality(Core.transCost(a, b, opts()));
+  const br = Core.bpmRel(a, b, opts()), kr = Core.keyRel(a, b), q = Core.quality(Core.transCost(a, b, opts()));
   return { q, br, kr, html: `<span class="tx ${q}" title="${esc(br.label + ' · ' + kr.label)}">${esc(br.label)}</span>` };
 }
 
@@ -1340,6 +1455,30 @@ function editKey(t) {
 }
 function scaleBpm(t, f) { if (!t.bpm) return; t.bpm = Math.round(t.bpm * f * 10) / 10; save(); render(); }
 
+// ---------------------------------------------------------------- areas
+function setPrep(open) {
+  $('#setup').classList.toggle('open', open);
+  $('#btnTogglePrep').setAttribute('aria-expanded', open);
+}
+function setConsole(open) {
+  S.settings.consoleOpen = !!open;
+  $('#console').classList.toggle('open', !!open);
+  $('#btnConsole').setAttribute('aria-expanded', !!open);
+}
+// One-line summary of the console settings, shown in the collapsed bottom bar.
+function renderChips() {
+  const st = S.settings, chip = (k, v) => `<span class="chip">${k} <b>${esc(v)}</b></span>`;
+  $('#consoleChips').innerHTML = [
+    chip('Flow', { smooth: 'Smooth', rising: 'Build up', falling: 'Wind down' }[st.mode] || st.mode),
+    chip('Harmonic', '×' + (+st.keyWeight).toFixed(1)),
+    chip('BPM', '×' + (+st.bpmWeight).toFixed(1)),
+    +st.maxJump ? chip('Max jump', st.maxJump + '%') : '',
+    chip('Fade', (+st.fadeSec ? st.fadeSec + 's ' : 'cut ') + ({ power: 'equal power', linear: 'linear', scurve: 'S-curve', overlap: 'overlap' }[st.fadeCurve] || '')),
+    chip('Match', { beat: 'beat-sync', tempo: 'tempo', off: 'off' }[st.tempoMatch] + ' ±' + st.maxStretch + '%'),
+    chip('Key lock', st.keyLock ? 'on' : 'off'),
+  ].join('');
+}
+
 // ---------------------------------------------------------------- wiring
 let faderDragging = false;
 function bindSetting(id, key, { type = 'value', show, after } = {}) {
@@ -1358,7 +1497,8 @@ function bindSetting(id, key, { type = 'value', show, after } = {}) {
 function init() {
   if (location.protocol === 'file:') $('#fileBanner').hidden = false;
   $('#decks').insertAdjacentHTML('afterbegin', deckHTML(0) + deckHTML(1));
-  if (S.order.length) $('#setup').hidden = true;
+  if (S.order.length) setPrep(false);
+  setConsole(S.settings.consoleOpen);
 
   bindSetting('optSample', 'sampleSec');
   bindSetting('optSegments', 'segments');
@@ -1367,17 +1507,28 @@ function init() {
   bindSetting('optMute', 'mute', { type: 'checked' });
   bindSetting('optAuto', 'autoMix', { type: 'checked' });
   bindSetting('optFade', 'fadeSec', { show: ['#vFade', v => (+v === 0 ? 'cut' : v + ' s')], after: renderMixer });
+  bindSetting('optCurve', 'fadeCurve', { after: applyVolumes });
   bindSetting('optOutro', 'outroSec', { show: ['#vOutro', v => v + ' s'] });
   bindSetting('optIntro', 'introSec', { show: ['#vIntro', v => v + ' s'] });
   bindSetting('optMaster', 'master', { show: ['#vMaster', v => v + '%'], after: () => { D.decks.forEach(d => (d.vol = -1)); applyVolumes(); } });
-  bindSetting('optSync', 'beatSync', { type: 'checked' });
+  bindSetting('optTempoMatch', 'tempoMatch');
+  bindSetting('optStretch', 'maxStretch', { show: ['#vStretch', v => '±' + v + '%'] });
+  bindSetting('optKeyLock', 'keyLock', { type: 'checked', after: () => D.decks.forEach(d => (d.audio.preservesPitch = !!S.settings.keyLock)) });
   bindSetting('optGlide', 'glideBack', { type: 'checked' });
+  bindSetting('optGlideSec', 'glideSec', { show: ['#vGlideSec', v => v + ' s'] });
   bindSetting('optMode', 'mode', { after: render });
-  bindSetting('optKeyW', 'keyWeight', { after: render });
+  bindSetting('optKeyW', 'keyWeight', { show: ['#vKeyW', v => '×' + (+v).toFixed(1)], after: render });
+  bindSetting('optBpmW', 'bpmWeight', { show: ['#vBpmW', v => '×' + (+v).toFixed(1)], after: render });
+  bindSetting('optMaxJump', 'maxJump', { show: ['#vMaxJump', v => (+v ? v + '%' : 'off')], after: render });
+  bindSetting('optHalf', 'halfDouble', { type: 'checked', after: render });
   bindSetting('optDedupe', 'dedupe', { type: 'checked' });
   bindSetting('optConvert', 'convert', { type: 'checked' });
 
-  $('#btnToggleSetup').onclick = () => { $('#setup').hidden = !$('#setup').hidden; };
+  $('#btnTogglePrep').onclick = () => setPrep(!$('#setup').classList.contains('open'));
+  $('#btnConsole').onclick = () => { setConsole(!S.settings.consoleOpen); save(); };
+  $('#console').addEventListener('input', renderChips);
+  $('#console').addEventListener('change', renderChips);
+  renderChips();
   $('#btnLoad').onclick = addFromInput;
   $('#btnFiles').onclick = () => $('#fileInput').click();
   $('#fileInput').onchange = e => { addFiles(e.target.files); e.target.value = ''; };
@@ -1403,6 +1554,7 @@ function init() {
   $('#btnStart').onclick = startSet;
   $('#btnMix').onclick = mixNow;
   $('#btnOrder').onclick = reorderUpcoming;
+  $('#btnOrderC').onclick = reorderUpcoming;
   $('#btnBuild').onclick = () => { if (!S.set.length || D.started || confirm('Replace the set with every analyzed track in the library?')) buildSet(); };
   $('#btnClear').onclick = () => {
     if (D.fading) return;
@@ -1555,7 +1707,7 @@ function init() {
   // drop local files anywhere
   let dragDepth = 0;
   const hasFiles = e => [...(e.dataTransfer?.types || [])].includes('Files');
-  window.addEventListener('dragenter', e => { if (hasFiles(e)) { dragDepth++; document.body.classList.add('dragging'); $('#setup').hidden = false; } });
+  window.addEventListener('dragenter', e => { if (hasFiles(e)) { dragDepth++; document.body.classList.add('dragging'); setPrep(true); } });
   window.addEventListener('dragleave', e => { if (hasFiles(e) && --dragDepth <= 0) { dragDepth = 0; document.body.classList.remove('dragging'); } });
   window.addEventListener('dragover', e => { if (hasFiles(e)) e.preventDefault(); });
   window.addEventListener('drop', e => {

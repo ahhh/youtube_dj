@@ -87,6 +87,15 @@ ok(Core.titleKey('Daft Punk - One More Time (Official Video)') === Core.titleKey
   ok(r.status === 0 && r.stdout.trim() === '3', 'orderTracks survives a NaN keyWeight: ' + r.stderr);
 }
 {
+  const a = { bpm: 70, camelot: '8A' }, b = { bpm: 140, camelot: '8A' }, c = { bpm: 132, camelot: '8A' }, d = { bpm: 120, camelot: '8A' };
+  ok(Core.bpmRel(a, b).half && !Core.bpmRel(a, b, { halfDouble: false }).half, 'halfDouble:false disables half/double-time matching');
+  ok(Core.transCost(a, b, { halfDouble: false }) > Core.transCost(a, b) + 5, 'without half/double time a 2:1 jump is expensive');
+  ok(Core.transCost(d, c, { bpmWeight: 0 }) === 0, 'bpmWeight 0 leaves only the key cost');
+  ok(Core.transCost(d, c, { bpmWeight: 2 }) > Core.transCost(d, c), 'bpmWeight scales the tempo cost');
+  ok(Core.transCost(d, c, { maxJump: 6 }) >= Core.transCost(d, c) + 8, 'a jump past maxJump is penalised');
+  ok(Core.transCost(d, { bpm: 123, camelot: '8A' }, { maxJump: 6 }) === Core.transCost(d, { bpm: 123, camelot: '8A' }), 'a jump inside maxJump is not');
+}
+{
   const silent = DSP.analyze([new Float32Array(48000 * 6)], 48000, {});
   ok(silent.rms < 0.0005, 'silent audio reports ~zero rms so callers can reject it');
   ok(DSP.analyze([synth({ bpm: 120, tonic: 0, minor: false, seconds: 8 })], 48000, { bpmMin: 'junk' }).bpm >= 80, 'non-numeric bpmMin falls back to the default');

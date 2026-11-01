@@ -64,20 +64,26 @@ const Core = (() => {
     return { cost: 5 + dn, label: 'key clash' };
   }
 
-  function bpmRel(a, b) {
+  // o.halfDouble === false stops a 2:1 tempo ratio from counting as a near match.
+  function bpmRel(a, b, o = {}) {
     if (!a || !b || !a.bpm || !b.bpm) return { cost: 3, pct: null, half: false, label: 'BPM ?' };
     const r = Math.log(b.bpm / a.bpm);
     let d = Math.abs(r) * 100, half = false;
     const dh = Math.min(Math.abs(r - Math.LN2), Math.abs(r + Math.LN2)) * 100;
-    if (dh + 4 < d) { d = dh + 4; half = true; }
+    if (o.halfDouble !== false && dh + 4 < d) { d = dh + 4; half = true; }
     const cost = d <= 1.5 ? d * 0.3 : 0.45 + Math.pow(d - 1.5, 1.4) * 0.6;
     const pct = (b.bpm / a.bpm - 1) * 100;
     const label = half ? 'half/double time' : (pct >= 0 ? '+' : '−') + Math.abs(pct).toFixed(1) + '%';
-    return { cost, pct, half, label };
+    return { cost, pct, half, label, dist: d };
   }
 
+  const num = (v, dflt) => (Number.isFinite(v) ? v : dflt);
+  // Options: keyWeight, bpmWeight (multipliers), mode, halfDouble, maxJump (% beyond which a jump is heavily penalised; 0 = off).
   function transCost(a, b, o = {}) {
-    let c = bpmRel(a, b).cost + (Number.isFinite(o.keyWeight) ? o.keyWeight : 1) * keyRel(a, b).cost;
+    const br = bpmRel(a, b, o);
+    let c = num(o.bpmWeight, 1) * br.cost + num(o.keyWeight, 1) * keyRel(a, b).cost;
+    const maxJump = num(o.maxJump, 0);
+    if (maxJump > 0 && br.pct != null && br.dist > maxJump) c += 8 + (br.dist - maxJump);
     if (a.bpm && b.bpm) {
       const pct = (b.bpm / a.bpm - 1) * 100;
       if (o.mode === 'rising' && pct < -1) c += 2 - pct;
