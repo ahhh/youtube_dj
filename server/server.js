@@ -12,6 +12,13 @@ const PORT = Number(process.env.PORT) || 8000;
 const HOST = process.env.HOST || '127.0.0.1';
 const extraHosts = (process.env.TUBEDJ_HOSTS || '').split(',').map((h) => h.trim()).filter(Boolean);
 if (!['127.0.0.1', '::1', 'localhost'].includes(HOST)) extraHosts.push(HOST);
+// Sites allowed to use this server from the browser: the hosted copies of the app
+// (GitHub Pages and dj.lockboxx.org) by default. Set TUBEDJ_ORIGINS (comma-separated) to replace the list,
+// e.g. for a fork: TUBEDJ_ORIGINS=https://yourname.github.io
+const allowedOrigins = (process.env.TUBEDJ_ORIGINS ?? 'https://ahhh.github.io,https://dj.lockboxx.org').split(',').map((o) => o.trim()).filter(Boolean);
 
-const app = createApp({ converter: createConverter(), root, extraHosts });
-createServer(app).listen(PORT, HOST, () => console.log(`Tube DJ on http://${HOST}:${PORT}`));
+const app = createApp({ converter: createConverter(), root, extraHosts, allowedOrigins });
+createServer(app).listen(PORT, HOST, () => {
+  console.log(`Tube DJ on http://${HOST}:${PORT}`);
+  if (allowedOrigins.length) console.log(`Also accepting the web app from: ${allowedOrigins.join(', ')}`);
+});

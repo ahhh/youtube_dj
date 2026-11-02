@@ -14,6 +14,7 @@
   --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 'Space Grotesk',system-ui,sans-serif}
 button{font:inherit;color:inherit;background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 12px;cursor:pointer}
 button:hover:not(:disabled){border-color:#3a4052;background:#20242f}
@@ -33,6 +34,30 @@ header.top{display:flex;align-items:center;gap:16px;padding:12px 20px;border-bot
 .brand span{color:var(--accent)}
 #stats{flex:1;color:var(--dim);font-size:13px}
 .banner{background:#3a1420;border-bottom:1px solid var(--accent);padding:10px 20px}
+
+/* download & convert help */
+dialog.help{width:min(760px,calc(100vw - 32px));max-height:calc(100vh - 48px);padding:0;border:1px solid var(--line);border-radius:16px;background:var(--panel);color:var(--text)}
+dialog.help::backdrop{background:rgba(0,0,0,.6)}
+.help-head{display:flex;align-items:center;gap:12px;padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel)}
+.help-head h2{margin:0;font-size:17px;flex:1}
+.help-body{padding:4px 18px 18px}
+.help-body p,.help-body li{color:var(--dim)}
+.help-body b,.help-body strong{color:var(--text)}
+.help-body h3{margin:18px 0 6px;font-size:14px}
+.help-body ol{padding-left:20px;margin:6px 0}
+.help-body li{margin:6px 0}
+.help-note{border-left:3px solid var(--ok);background:var(--panel2);padding:10px 12px;border-radius:0 8px 8px 0;margin:12px 0}
+.cmd{display:flex;align-items:flex-start;gap:8px;background:#0b0c10;border:1px solid var(--line);border-radius:8px;padding:8px 8px 8px 10px;margin:6px 0}
+.cmd code{flex:1;min-width:0;font-family:var(--mono);font-size:12px;color:var(--text);white-space:pre-wrap;word-break:break-all}
+.cmd button{padding:2px 8px;font-size:12px}
+.os{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center;font-size:12px}
+.os>span{color:var(--dim)}
+a.btn{display:inline-block;text-decoration:none;color:#fff;background:var(--accent);border-radius:8px;padding:6px 14px;font-weight:600}
+.srv-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}
+.srv-row input{flex:1;min-width:180px;font:12px var(--mono);background:#0b0c10;color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.srv-status{font-size:12px;margin-top:6px}
+.srv-status.up{color:var(--good)} .srv-status.down{color:var(--dim)}
+@media (max-width:560px){.os{grid-template-columns:1fr}.os>span{margin-top:4px}}
 
 main{padding:16px 20px 40px;display:flex;flex-direction:column;gap:16px;max-width:1600px;margin:0 auto}
 body{padding-bottom:64px}
@@ -241,7 +266,56 @@ aside{display:flex;flex-direction:column;gap:16px}
 <header class="top">
   <div class="brand">TUBE<span>DJ</span></div>
   <div id="stats"></div>
+  <button id="btnHelpDl" class="ghost" title="How to get YouTube tracks as local audio files">⇩ Download &amp; convert</button>
 </header>
+
+<dialog id="dlHelp" class="help" aria-labelledby="dlHelpTitle">
+  <div class="help-head"><h2 id="dlHelpTitle">Downloading &amp; converting YouTube tracks</h2><button id="btnHelpClose" aria-label="Close">✕</button></div>
+  <div class="help-body">
+    <p>Tube DJ runs in your browser. It plays YouTube through YouTube's own player, and <b>this site never downloads or converts anything</b>. Browsers can't save YouTube audio, and YouTube doesn't allow it.</p>
+    <p>A YouTube track as a local audio file gets exact BPM and key, a waveform and beat-synced mixing. If you want that, <b>you do the download yourself, on your own computer</b>, with one of the options below. Then drop the files into Tube DJ.</p>
+    <div class="help-note">Downloading may break YouTube's Terms of Service. Only download music you have the right to, such as your own uploads, Creative Commons tracks, or anything the artist lets you download.</div>
+
+    <h3>Option 1: the Tube DJ convert script</h3>
+    <p>A small script you run in a terminal. Give it a YouTube link and it saves an mp3.</p>
+    <ol>
+      <li><b>Install Node.js 20 or newer</b>, plus <b>ffmpeg</b> for mp3 output. Without ffmpeg the script saves the original .m4a/.webm audio, and Tube DJ plays that too.
+        <div class="os">
+          <span>macOS</span><div class="cmd"><code>brew install node ffmpeg</code><button data-copy>Copy</button></div>
+          <span>Windows</span><div class="cmd"><code>winget install OpenJS.NodeJS.LTS Gyan.FFmpeg</code><button data-copy>Copy</button></div>
+          <span>Linux</span><div class="cmd"><code>sudo apt install nodejs ffmpeg</code><button data-copy>Copy</button></div>
+        </div>
+        <small class="dim">Or get Node from <a href="https://nodejs.org" target="_blank" rel="noopener" style="color:var(--accent2)">nodejs.org</a>. Check your version with <code class="mono">node --version</code>.</small>
+      </li>
+      <li><b>Download the script:</b> <a class="btn" href="tools/tubedj-convert.mjs" download="tubedj-convert.mjs">⇩ tubedj-convert.mjs</a></li>
+      <li><b>Open a terminal in the folder you saved it to</b> (usually Downloads):
+        <div class="cmd"><code>cd ~/Downloads</code><button data-copy>Copy</button></div>
+      </li>
+      <li><b>Run it with a YouTube link.</b> The mp3 is saved next to the script:
+        <div class="cmd"><code>node tubedj-convert.mjs "https://www.youtube.com/watch?v=VIDEO_ID"</code><button data-copy>Copy</button></div>
+        Several links at once, saved into a folder:
+        <div class="cmd"><code>node tubedj-convert.mjs "LINK_1" "LINK_2" -o my-set</code><button data-copy>Copy</button></div>
+        <small class="dim"><code class="mono">--raw</code> skips ffmpeg and keeps YouTube's original audio. <code class="mono">--help</code> lists all options. Playlist links aren't supported, so pass the individual video links.</small>
+      </li>
+      <li><b>Drop the files onto this page</b>, or use <i>browse</i> under “Local audio files”.</li>
+    </ol>
+
+    <h3>Option 2: convert from inside the app (local companion server)</h3>
+    <p>Run the Tube DJ server on your computer. Convert buttons then appear here, and converted tracks swap in automatically. You need <a href="https://git-scm.com" target="_blank" rel="noopener" style="color:var(--accent2)">git</a> and Node.js 20+. ffmpeg comes bundled.</p>
+    <div class="cmd"><code>git clone https://github.com/ahhh/youtube_dj.git
+cd youtube_dj/server
+npm install
+npm start</code><button data-copy>Copy</button></div>
+    <p>Leave that running. Then open <b>http://127.0.0.1:8000</b>, or connect this page to it:</p>
+    <div class="srv-row"><input id="srvAddr" spellcheck="false" aria-label="Server address"><button id="btnSrvConnect" class="primary">Connect</button><button id="btnSrvForget" class="ghost" hidden>Disconnect</button></div>
+    <div id="srvStatus" class="srv-status down">Not connected.</div>
+    <small class="dim" id="srvOriginHint">If Chrome asks whether this site may access devices on your local network, allow it. The server only accepts this page if its address is on the server's allow-list.</small>
+
+    <h3>Option 3: already use yt-dlp?</h3>
+    <p><a href="https://github.com/yt-dlp/yt-dlp" target="_blank" rel="noopener" style="color:var(--accent2)">yt-dlp</a> works too, and it handles playlists. See its <a href="https://github.com/yt-dlp/yt-dlp#installation" target="_blank" rel="noopener" style="color:var(--accent2)">install instructions</a>.</p>
+    <div class="cmd"><code>yt-dlp -x --audio-format mp3 "https://www.youtube.com/watch?v=VIDEO_ID"</code><button data-copy>Copy</button></div>
+  </div>
+</dialog>
 
 <main>
   <section id="setup" class="area prep open">
@@ -263,6 +337,7 @@ aside{display:flex;flex-direction:column;gap:16px}
           <b>Local audio files</b>
           <span>Drop files anywhere on the page, or <button class="link" id="btnFiles">browse</button></span>
           <small>Decoded and analyzed in full: more accurate BPM/key, plus beat-synced mixing.</small>
+          <small>Want YouTube tracks as files? <button class="link" data-open-help>How to download &amp; convert</button></small>
         </div>
       </div>
       <div>
@@ -563,10 +638,19 @@ async function fetchTitles(ids) {
 // The local Tube DJ server (server/) turns a YouTube id into a cached mp3. A converted
 // track becomes an ordinary local-file track backed by that mp3, so it gets exact
 // BPM/key from a full decode, a waveform and true beat sync like any dropped file.
-const API = { up: false };
+// The server is either this page's own origin (opened from http://127.0.0.1:8000) or,
+// on a hosted copy such as GitHub Pages, a local address the user chose to connect to.
+// We only call a remote address after that opt-in, so visitors without a server never
+// see Chrome's local-network permission prompt.
+const API = { up: false, base: '' };
+const DEFAULT_SERVER = 'http://127.0.0.1:8000';
+const DEFAULT_ORIGINS = ['https://ahhh.github.io', 'https://dj.lockboxx.org']; // keep in sync with server/server.js
+const SERVER_KEY = 'tubedj.server';
+const savedServer = () => { try { return localStorage.getItem(SERVER_KEY) || ''; } catch { return ''; } };
+const audioUrl = id => `${API.base}/api/audio/${id}.mp3`;
 const CONV = new Map(); // id -> { pct } while a conversion is running
 const api = async (path, opts) => {
-  const r = await fetch(path, opts);
+  const r = await fetch(API.base + path, opts);
   const j = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(j.error || 'HTTP ' + r.status);
   return j;
@@ -579,23 +663,50 @@ function revertConverted(t) {
   if (!t) { save(); render(); syncDecks(); }
 }
 
-async function probeServer() {
-  if (location.protocol === 'file:') { revertConverted(); return; }
-  try { await api('/api/health'); API.up = true; } catch { revertConverted(); return; }
-  $('#convRow').hidden = false; $('#btnConvertAll').hidden = false;
+function setServerUp(up) {
+  API.up = up;
+  $('#convRow').hidden = !up; $('#btnConvertAll').hidden = !up;
+  renderServerStatus();
+}
+
+// Try the page's own origin, then the opted-in local address (or `base`, from Connect).
+// Returns true when a server answered.
+async function probeServer({ base } = {}) {
+  if (location.protocol === 'file:') { revertConverted(); return false; }
+  const candidates = [''];
+  const remote = (base ?? savedServer()).trim().replace(/\/+$/, '');
+  if (remote && remote !== location.origin) candidates.push(remote);
+  let found = null;
+  for (const c of candidates) {
+    API.base = c;
+    try { await api('/api/health'); found = c; break; } catch {}
+  }
+  if (found === null) { API.base = ''; setServerUp(false); revertConverted(); return false; }
+  setServerUp(true);
   // Converted tracks survive reloads: re-attach the cached mp3, or fall back to YouTube if it was purged.
   for (const t of Object.values(S.tracks)) {
     if (!t.converted) continue;
     let st = null;
     try { st = await api('/api/status?id=' + encodeURIComponent(t.id)); } catch {}
-    if (st?.state === 'done') LOCAL.set(t.id, { file: null, url: `/api/audio/${t.id}.mp3` });
+    if (st?.state === 'done') LOCAL.set(t.id, { file: null, url: audioUrl(t.id) });
     else revertConverted(t);
   }
   save(); render(); syncDecks();
+  return true;
+}
+
+function renderServerStatus() {
+  const el = $('#srvStatus');
+  if (!el) return;
+  el.className = 'srv-status ' + (API.up ? 'up' : 'down');
+  el.textContent = API.up
+    ? `Connected to ${API.base || location.origin}. Convert buttons are on in Prep and the library.`
+    : savedServer() ? `Can't reach ${savedServer()}. Is the server running?` : 'Not connected.';
+  $('#btnSrvForget').hidden = !savedServer();
 }
 
 function adoptMp3(t) {
-  LOCAL.set(t.id, { file: null, url: `/api/audio/${t.id}.mp3` });
+  LOCAL.set(t.id, { file: null, url: audioUrl(t.id) });
   t.kind = 'file'; t.converted = true; t.status = 'pending'; t.error = '';
   for (const d of D.decks) if (d.trackId === t.id && !d.playing) d.load(t.id);
 }
@@ -1494,6 +1605,46 @@ function bindSetting(id, key, { type = 'value', show, after } = {}) {
   });
 }
 
+function initDownloadHelp() {
+  const dlg = $('#dlHelp');
+  const open = () => { renderServerStatus(); dlg.showModal(); };
+  $('#btnHelpDl').onclick = open;
+  document.querySelectorAll('[data-open-help]').forEach(b => (b.onclick = open));
+  $('#btnHelpClose').onclick = () => dlg.close();
+  dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); }); // backdrop click
+  dlg.addEventListener('click', async e => {
+    const b = e.target.closest('[data-copy]');
+    if (!b) return;
+    try { await navigator.clipboard.writeText(b.previousElementSibling.textContent); b.textContent = 'Copied'; }
+    catch { b.textContent = 'Select & copy'; }
+    setTimeout(() => (b.textContent = 'Copy'), 1500);
+  });
+
+  // Same-origin pages already talk to their own server; the connect box is for hosted copies.
+  const local = ['127.0.0.1', 'localhost', '[::1]'].includes(location.hostname);
+  $('#srvAddr').value = savedServer() || DEFAULT_SERVER;
+  if (!local && !DEFAULT_ORIGINS.includes(location.origin) && location.protocol !== 'file:') {
+    $('#srvOriginHint').textContent = `This copy of the app is at ${location.origin}, which the server doesn't allow by default. Start it with TUBEDJ_ORIGINS=${location.origin} npm start (PowerShell: $env:TUBEDJ_ORIGINS="${location.origin}"; npm start). If Chrome asks about local network access, allow it.`;
+  }
+  $('#btnSrvConnect').onclick = async () => {
+    const addr = $('#srvAddr').value.trim().replace(/\/+$/, '');
+    if (!/^https?:\/\/[^/]+$/i.test(addr)) return toast('Enter an address like http://127.0.0.1:8000');
+    $('#srvStatus').textContent = 'Connecting…';
+    if (await probeServer({ base: addr })) {
+      if (API.base) { try { localStorage.setItem(SERVER_KEY, addr); } catch {} }
+      renderServerStatus(); toast('Connected to the Tube DJ server');
+    } else {
+      $('#srvStatus').className = 'srv-status down';
+      $('#srvStatus').textContent = `Couldn't reach ${addr}. Check that npm start is running, that you allowed local network access, and that the server allows this site.`;
+    }
+  };
+  $('#btnSrvForget').onclick = () => {
+    try { localStorage.removeItem(SERVER_KEY); } catch {}
+    if (API.base) { API.base = ''; setServerUp(false); revertConverted(); }
+    renderServerStatus();
+  };
+}
+
 function init() {
   if (location.protocol === 'file:') $('#fileBanner').hidden = false;
   $('#decks').insertAdjacentHTML('afterbegin', deckHTML(0) + deckHTML(1));
@@ -1524,6 +1675,7 @@ function init() {
   bindSetting('optDedupe', 'dedupe', { type: 'checked' });
   bindSetting('optConvert', 'convert', { type: 'checked' });
 
+  initDownloadHelp();
   $('#btnTogglePrep').onclick = () => setPrep(!$('#setup').classList.contains('open'));
   $('#btnConsole').onclick = () => { setConsole(!S.settings.consoleOpen); save(); };
   $('#console').addEventListener('input', renderChips);

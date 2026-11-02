@@ -6,9 +6,10 @@ import { VIDEO_ID } from './ytextract.js';
 const TYPES = {
   '.html': 'text/html; charset=utf-8',
   '.js': 'text/javascript; charset=utf-8',
+  '.mjs': 'text/javascript; charset=utf-8',
   '.mp3': 'audio/mpeg',
 };
-const STATIC = new Set(['/index.html', '/core.js']);
+const STATIC = new Set(['/index.html', '/core.js', '/tools/tubedj-convert.mjs']);
 const LOOPBACK = ['localhost', '127.0.0.1', '[::1]'];
 
 const sendJson = (res, code, body) => {
@@ -50,17 +51,44 @@ function serveFile(req, res, file, type) {
   body.pipe(res);
 }
 
-export function createApp({ converter, root, extraHosts = [] }) {
+// allowedOrigins lists sites (e.g. the GitHub Pages copy of the app) that may call
+// this server from the browser. Everything else stays same-origin only.
+export function createApp({ converter, root, extraHosts = [], allowedOrigins = [] }) {
   const hosts = new Set([...LOOPBACK, ...extraHosts.map((h) => h.toLowerCase())]);
+  const origins = new Set(allowedOrigins.map((o) => o.toLowerCase().replace(/\/+$/, '')));
   const hostname = (h) => (h || '').toLowerCase().replace(/:\d+$/, '');
+  const sameOrigin = (origin, host) => {
+    try {
+      return new URL(origin).host === host;
+    } catch {
+      return false;
+    }
+  };
 
   return function handle(req, res) {
     // Reject DNS-rebinding (foreign Host) and cross-site requests: this server can
     // spend bandwidth and disk, so a random web page must not be able to drive it.
     if (!hosts.has(hostname(req.headers.host))) return sendJson(res, 403, { error: 'host not allowed' });
-    if (req.method === 'POST') {
-      const origin = req.headers.origin;
-      if (origin && new URL(origin).host !== req.headers.host) return sendJson(res, 403, { error: 'cross-origin request blocked' });
+    const origin = req.headers.origin;
+    const trusted = !!origin && origins.has(origin.toLowerCase());
+    if (trusted) {
+      res.setHeader('access-control-allow-origin', origin);
+      res.setHeader('access-control-expose-headers', 'content-length, content-range, accept-ranges');
+      res.setHeader('vary', 'origin');
+    }
+    if (req.method === 'OPTIONS') {
+      if (!trusted) return sendJson(res, 403, { error: 'origin not allowed' });
+      // Preflight, including Chrome's Private Network Access check for public site -> loopback.
+      res.writeHead(204, {
+        'access-control-allow-methods': 'GET, HEAD, POST',
+        'access-control-allow-headers': 'range',
+        'access-control-allow-private-network': 'true',
+        'access-control-max-age': '600',
+      });
+      return res.end();
+    }
+    if (req.method === 'POST' && origin && !trusted && !sameOrigin(origin, req.headers.host)) {
+      return sendJson(res, 403, { error: 'cross-origin request blocked' });
     }
     const url = new URL(req.url, 'http://x');
     const path = url.pathname;

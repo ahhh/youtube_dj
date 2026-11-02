@@ -36,4 +36,5 @@ const converter = createConverter({
   },
 });
 const port = Number(process.env.PORT) || 8766;
-createServer(createApp({ converter, root })).listen(port, '127.0.0.1', () => console.log(`fake Tube DJ on http://127.0.0.1:${port}`));
+const allowedOrigins = (process.env.TUBEDJ_ORIGINS || '').split(',').filter(Boolean);
+createServer(createApp({ converter, root, allowedOrigins })).listen(port, '127.0.0.1', () => console.log(`fake Tube DJ on http://127.0.0.1:${port}`));

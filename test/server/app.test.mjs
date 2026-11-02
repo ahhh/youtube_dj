@@ -128,9 +128,74 @@ describe('HTTP API', () => {
     assert.equal(same.status, 200);
   });
 
+  it('does not crash on a malformed Origin header', async () => {
+    const res = await raw(`/api/convert?id=${ID}`, { method: 'POST', headers: { origin: 'not a url' } });
+    assert.equal(res.status, 403);
+  });
+
+  it('sends no CORS headers to origins that are not allowed', async () => {
+    const res = await raw('/api/health', { headers: { origin: 'https://evil.example' } });
+    assert.equal(res.headers['access-control-allow-origin'], undefined);
+    assert.equal((await raw('/api/health', { method: 'OPTIONS', headers: { origin: 'https://evil.example' } })).status, 403);
+  });
+
+  it('serves the downloadable convert script', async () => {
+    const res = await fetch(`${base}/tools/tubedj-convert.mjs`);
+    assert.equal(res.status, 200);
+    assert.match(await res.text(), /tubedj-convert/);
+  });
+
   it('returns JSON 404 for unknown routes', async () => {
     const res = await fetch(`${base}/api/nope`);
     assert.equal(res.status, 404);
     assert.deepEqual(await res.json(), { error: 'not found' });
+  });
+});
+
+describe('allowed origins (hosted web app)', () => {
+  const PAGES = 'https://ahhh.github.io';
+  let server, port, converter;
+  before(async () => {
+    converter = createConverter({ cacheDir: tmpCache(), ...fakeSource() });
+    server = createServer(createApp({ converter, root, allowedOrigins: [PAGES + '/'] }));
+    await new Promise((r) => server.listen(0, '127.0.0.1', r));
+    port = server.address().port;
+  });
+  after(() => server.close());
+  const raw = (path, { method = 'GET', headers = {} } = {}) => new Promise((resolve, reject) => {
+    const req = request({ host: '127.0.0.1', port, path, method, headers }, (res) => {
+      res.resume();
+      res.on('end', () => resolve({ status: res.statusCode, headers: res.headers }));
+    });
+    req.on('error', reject);
+    req.end();
+  });
+
+  it('answers preflights, including the private-network check', async () => {
+    const res = await raw(`/api/convert?id=${ID}`, {
+      method: 'OPTIONS',
+      headers: { origin: PAGES, 'access-control-request-method': 'POST', 'access-control-request-private-network': 'true' },
+    });
+    assert.equal(res.status, 204);
+    assert.equal(res.headers['access-control-allow-origin'], PAGES);
+    assert.equal(res.headers['access-control-allow-private-network'], 'true');
+    assert.match(res.headers['access-control-allow-methods'], /POST/);
+  });
+
+  it('lets the allowed origin convert and fetch audio with CORS headers', async () => {
+    const post = await raw(`/api/convert?id=${ID}`, { method: 'POST', headers: { origin: PAGES } });
+    assert.equal(post.status, 200);
+    assert.equal(post.headers['access-control-allow-origin'], PAGES);
+    await waitFor(() => converter.status(ID).state === 'done');
+    const audio = await raw(`/api/audio/${ID}.mp3`, { headers: { origin: PAGES, range: 'bytes=0-9' } });
+    assert.equal(audio.status, 206);
+    assert.equal(audio.headers['access-control-allow-origin'], PAGES);
+    assert.match(audio.headers['access-control-expose-headers'], /content-range/);
+    assert.equal(audio.headers.vary, 'origin');
+  });
+
+  it('still enforces the Host check for allowed origins', async () => {
+    const res = await raw('/api/health', { headers: { origin: PAGES, host: 'evil.example' } });
+    assert.equal(res.status, 403);
   });
 });

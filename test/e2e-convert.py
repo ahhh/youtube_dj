@@ -3,7 +3,8 @@
 Run:  python3 test/e2e-convert.py        (needs `pip install playwright` + a Chromium)
 Covers: server detection, per-track and bulk convert, auto-convert in Analyze pending,
 failure fallback, deck playback, reload rehydration, server-down revert, stale-cancel
-regression, settings clamping, silent-file rejection, corrupt saved state.
+regression, settings clamping, silent-file rejection, corrupt saved state, and the
+hosted (GitHub Pages style) app connecting cross-origin to the local server.
 """
 import os, subprocess, sys, time, urllib.request
 from pathlib import Path
@@ -12,6 +13,9 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parent.parent
 PORT = int(os.environ.get('E2E_PORT', '8767'))
 BASE = f'http://127.0.0.1:{PORT}/'
+# A second origin serving just the static files stands in for GitHub Pages.
+HOSTED_PORT = PORT + 1
+HOSTED = f'http://127.0.0.1:{HOSTED_PORT}/'
 A, B, SIL, FAIL = 'aaaaaaaaaaa', 'bbbbbbbbbbb', 'ssssssssssi', 'failfailfai'
 failures = []
 
@@ -20,7 +24,7 @@ def check(cond, msg):
     if not cond: failures.append(msg)
 
 def start_server():
-    p = subprocess.Popen(['node', str(ROOT / 'test/server/fake-server.mjs')], env={**os.environ, 'PORT': str(PORT)},
+    p = subprocess.Popen(['node', str(ROOT / 'test/server/fake-server.mjs')], env={**os.environ, 'PORT': str(PORT), 'TUBEDJ_ORIGINS': HOSTED.rstrip('/')},
                          stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     for _ in range(50):
         try:
@@ -34,6 +38,8 @@ def wav_silence(seconds=8, sr=22050):
     return b'RIFF' + struct.pack('<I', 36 + n) + b'WAVEfmt ' + struct.pack('<IHHIIHH', 16, 1, 1, sr, sr * 2, 2, 16) + b'data' + struct.pack('<I', n) + bytes(n)
 
 server = start_server()
+hosted = subprocess.Popen([sys.executable, '-m', 'http.server', str(HOSTED_PORT), '--bind', '127.0.0.1', '--directory', str(ROOT)],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
 try:
     with sync_playwright() as p:
         browser = p.chromium.launch(args=['--autoplay-policy=no-user-gesture-required'])
@@ -148,10 +154,40 @@ try:
         t = track(A)
         check(t['kind'] == 'yt' and not t['conv'] and t['bpm'], f"server down: track reverts to YouTube and keeps its BPM ({t})")
         check(not pg.is_visible('#convRow'), 'convert controls hidden when the server is down')
+
+        # 13. hosted copy (different origin): no server calls until the user connects
+        pg.unroute('**/api/**')
+        for _ in range(50):
+            try: urllib.request.urlopen(HOSTED + 'index.html', timeout=1); break
+            except Exception: time.sleep(0.2)
+        hits = []
+        pg.on('request', lambda r: hits.append(r.url) if r.url.startswith(BASE + 'api/') else None)
+        pg.goto(HOSTED); pg.wait_for_timeout(1500)
+        check(not ev('API.up') and not hits, f'hosted app does not probe the local server before opt-in ({hits[:3]})')
+        check(not pg.is_visible('#convRow') and not pg.is_visible('#btnConvertAll'), 'hosted app hides convert controls')
+        pg.click('#btnHelpDl')
+        check(pg.is_visible('#dlHelp'), 'download & convert dialog opens')
+        check(pg.get_attribute('a[download]', 'href') == 'tools/tubedj-convert.mjs', 'dialog links the convert script')
+        with pg.expect_download() as dl: pg.click('a[download]')
+        check(dl.value.suggested_filename == 'tubedj-convert.mjs', 'script downloads as tubedj-convert.mjs')
+        pg.fill('#srvAddr', BASE)
+        pg.click('#btnSrvConnect'); pg.wait_for_function('API.up === true', timeout=10000)
+        check(ev('API.base') == BASE.rstrip('/'), 'connected cross-origin to the local server')
+        check('Connected' in pg.inner_text('#srvStatus'), 'dialog shows connected status')
+        pg.click('#btnHelpClose')
+        ev(f"addTrack('{B}','t'); save(); render();")
+        ok = ev(f"convertTrack(S.tracks['{B}'],{{analyze:true}})")
+        t = wait_status(B, ['done', 'error'], 40)
+        check(ok and t['conv'] and t['bpm'] == 100, f'cross-origin convert + full decode works ({t})')
+        pg.reload(); pg.wait_for_function('API.up === true', timeout=10000); pg.wait_for_timeout(500)
+        check(track(B)['conv'] and ev(f"LOCAL.get('{B}').url").startswith(BASE), 'hosted app reconnects after reload and re-attaches the mp3')
+        pg.click('#btnHelpDl'); pg.click('#btnSrvForget')
+        check(not ev('API.up') and not pg.is_visible('#convRow') and not track(B)['conv'], 'disconnect hides convert controls and reverts converted tracks')
         check(not errors, f'no page errors during the run: {errors}')
         browser.close()
 finally:
     server.kill()
+    hosted.kill()
 
 print(f"\n{'FAILED: ' + str(len(failures)) if failures else 'all e2e checks passed'}")
 sys.exit(1 if failures else 0)
